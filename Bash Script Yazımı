@@ -1,0 +1,203 @@
+1. Bash’te Değişkenler
+
+Bash’te değişken tanımlamak diğer birçok programlama diline göre çok daha basittir. Değişken isimleri genellikle büyük-küçük harf, sayı ve alt çizgi (_) içerebilir. Fakat bir değişkeni kullanmaya başlamadan önce bazı noktalara dikkat etmeliyiz:
+	1.	Değişken ataması sırasında = işaretinden önce veya sonra boşluk bulunmaz.
+Örneğin:
+
+NAME="Ali"   # Doğru
+NAME = "Ali" # Yanlış
+
+
+	2.	Değişken değeri atadıktan sonra değeri çağırmak için echo $DEGISKEN şeklinde $ işareti kullanılır.
+	3.	export DEGISKEN=value şeklinde tanımlarsanız, o değişken alt işlemler tarafından da görülebilir (ortam değişkeni gibi davranır).
+
+Günlük Hayattan Basit Senaryolar
+	•	Kullanıcıdan bir dosya adı almak ve üzerine işlem yapmak:
+
+#! /usr/bin/env bash
+
+FILE_NAME="rapor.txt"
+echo "Dosya Adı: $FILE_NAME"
+
+# Dosyanın var olup olmadığını kontrol edelim
+if [ -f "$FILE_NAME" ]; then
+    echo "$FILE_NAME mevcut"
+else
+    echo "$FILE_NAME mevcut değil, oluşturuluyor..."
+    touch "$FILE_NAME"
+fi
+
+
+	•	Sürekli kullanılan bir sabit değeri (örneğin bir API url’sini) değişkende tutmak:
+
+BASE_URL="https://ornek-api.com/v1"
+echo "API Base URL: $BASE_URL"
+# Buradan sonra diğer curl isteklerimizde bu değişkeni kullanarak URL'yi kısaltabiliriz.
+
+
+
+
+2. if Koşulları
+
+Bash’te if koşulu genellikle aşağıdaki yapıda kullanılır:
+
+if [ koşul ]
+then
+    # koşul doğru ise çalışacak kısım
+elif [ başka_koşul ]
+then
+    # başka_koşul doğru ise çalışacak kısım
+else
+    # hiçbiri değilse
+fi
+
+Dikkat: [ ] içerisinde koşullar yazılırken, öncesinde ve sonrasında boşluk olması önemlidir.
+Örneğin: if [ $SAYI -gt 5 ] → “Eğer sayı 5’ten büyükse” anlamına gelir.
+
+Sık kullanılan if kontrol tipleri:
+	1.	Sayı Karşılaştırmaları:
+	•	-lt (<), -le (≤), -gt (>), -ge (≥), -eq (==), -ne (!=)
+	2.	String Karşılaştırmaları:
+	•	= eşit mi, != eşit değil mi.
+	•	-z string boş mu, -n string boş değil mi.
+	3.	Dosya/Dizin Kontrolleri:
+	•	-f bir dosya mı, -d bir dizin mi, -e var mı, -r okunabilir mi, -w yazılabilir mi, -x çalıştırılabilir mi vb.
+
+Günlük Hayattan Örnek
+	•	Sudan bir örnek: Komut satırından girilen bir sayının 18’den büyük olup olmadığını kontrol edip, ona göre mesaj vermek:
+
+#! /usr/bin/env bash
+
+read -p "Yaşınızı giriniz: " YAS
+
+if [ $YAS -lt 18 ]; then
+    echo "Ehliyet alamazsınız."
+elif [ $YAS -ge 18 ]; then
+    echo "Ehliyet alabilirsiniz."
+fi
+
+
+	•	Bir klasördeki dosya olup olmadığını kontrol etmek:
+Örneğin “log.txt” dosyası varsa bir yedek oluşturmak isteyebiliriz:
+
+if [ -f "log.txt" ]; then
+    cp log.txt log.txt.bak
+    echo "log.txt dosyası bulundu ve yedeklendi."
+else
+    echo "log.txt dosyası bulunamadı."
+fi
+
+
+
+
+3. for Döngüsü
+
+Bash’te for döngüsü, bir listedeki (dizindeki dosyalar, belirli sayı aralığı vb.) öğeler üzerinde tek tek işlem yapmak için kullanılır.
+
+Temel Kullanım
+
+for ITEM in list_of_items
+do
+    # her ITEM için çalışacak komutlar
+done
+
+Bash’te liste şu şekillerde elde edilebilir:
+	•	Elle yazılmış öğe listesi: for FRUIT in apple banana orange
+	•	Joker karakter (wildcard) kullanımı: for FILE in *.txt
+	•	Komut sonuçlarını parantez içinde döndürme: for USER in $(cat users.txt)
+
+Günlük Hayattan Örnekler
+	1.	Bir dizindeki tüm .jpg dosyalarını .pngye dönüştürmek:
+(Örnek gereği “convert” gibi bir dönüşüm komutu kullanıldığını varsayalım.)
+
+#! /usr/bin/env bash
+
+for IMG in *.jpg
+do
+    echo "$IMG dosyası işleniyor..."
+    convert "$IMG" "${IMG%.jpg}.png"  # .jpg uzantısını .png ile değiştirir
+done
+
+Burada IMG%.jpg ifadesi, $IMG değişkeninin sonundaki .jpg kısmını siler ve yerine .png ekler. Sonuçta yeni dosya adı dosya.png gibi olacaktır.
+
+	2.	Uzun bir liste halindeki sunucu isimlerine SSH ile bağlanmak ve bir komut çalıştırmak:
+
+SERVER_LIST="server1 server2 server3"
+
+for SERVER in $SERVER_LIST
+do
+    echo "$SERVER sunucusunda disk kullanım kontrolü yapılıyor..."
+    ssh "$SERVER" "df -h"
+done
+
+Böylece her sunucuya sırayla bağlanıp komut çalıştırmış oluruz.
+
+	3.	1’den 5’e kadar sayıları yazdırmak:
+
+for i in {1..5}
+do
+    echo "Sayı: $i"
+done
+
+Bu yazım şekli Bash 4.0+ sürümlerinde geçerlidir. (Öncesinde klasik yöntem seq kullanımıydı: for i in $(seq 1 5); do ... done)
+
+
+4. while Döngüsü
+
+while döngüsü, belirtilen bir koşul doğru olduğu sürece çalışmaya devam eder. Genellikle aşağıdaki yapıdadır:
+
+while [ koşul ]
+do
+    # yapılacak işler
+done
+
+Koşul, bir değişkenin belirli bir değere ulaşmaması veya bir komutun başarılı/başarısız olması gibi durumlar olabilir.
+
+Günlük Hayattan Örnekler
+	1.	Sayaç Kullanımı:
+
+#! /usr/bin/env bash
+
+COUNT=1
+while [ $COUNT -le 5 ]
+do
+    echo "Sayaç: $COUNT"
+    COUNT=$((COUNT+1))  # COUNT değişkenini 1 arttır
+done
+
+Bu örnek, 1’den başlayarak 5’e kadar ekrana yazdırır.
+
+	2.	Kullanıcı ‘q’ ya da ‘Q’ girene kadar isim istemek:
+
+while true
+do
+    read -p "Bir isim giriniz (çıkmak için q/Q): " NAME
+    if [ "$NAME" == "q" ] || [ "$NAME" == "Q" ]; then
+        echo "Programdan çıkılıyor..."
+        break
+    else
+        echo "Girdiğiniz isim: $NAME"
+    fi
+done
+
+Burada while true ifadesi, döngüyü sonsuza kadar devam ettirir. Kullanıcı q veya Q girince break ile döngüyü sonlandırırız.
+
+	3.	Dosyayı satır satır okumak:
+
+# Diğer bir örnek: bir dosyayı satır satır okuyarak ekranda göstermek
+
+while IFS= read -r LINE
+do
+    echo "Okunan satır: $LINE"
+done < "ornek.txt"
+
+Bu örnekte < "ornek.txt" kısmı sayesinde while döngüsü, “ornek.txt” dosyasının satırlarını teker teker okur ve LINE değişkenine atar.
+
+
+
+Sonuç ve Öneriler
+	•	Bash script yazarken noktalı virgül veya boşluk gibi küçük detaylara dikkat etmek çok önemlidir.
+	•	Koşulları test etmek için [ ve ] içerisindeki boşlukların doğru olduğundan emin olun.
+	•	Değişkenleri tanımlarken boşluk bırakmayın ve çağırırken $ işareti eklemeyi unutmayın.
+	•	for ve while döngüleri sayesinde dosya işlemleri, sunucular üzerinde komut çalıştırma, log tutma gibi birçok otomasyon işini kolayca yapabilirsiniz.
+	•	Bir script’i her gün veya belli aralıklarla çalıştırmak için Linux’ta cron kullanılır. Örneğin, crontab -e ile zamanlamayı ayarlayabilirsiniz.
