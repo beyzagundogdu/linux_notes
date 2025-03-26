@@ -1,0 +1,238 @@
+1. crontab
+
+Linux/Unix sistemlerde zamanlanmış görevleri yönetmek için en yaygın kullanılan araç cron servisidir. crontab, kullanıcı bazlı görev planlamasına izin verir. 
+Yani her kullanıcının kendine ait bir “crontab” dosyası olabilir.
+
+1.1. crontab -e
+	•	crontab -e komutu, ilgili kullanıcının crontab dosyasını düzenlemeye yarar.
+	•	Dosyayı kaydedip çıktığınızda, yaptığınız değişiklikler otomatik olarak cron servisine yüklenir.
+
+1.2. crontab Dosyası Söz Dizimi
+
+Crontab dosyasında her satır bir zamanlama girişini ifade eder. Temel format:
+
+*  *  *  *  *  /path/to/command arg1 arg2 ...
+┬  ┬  ┬  ┬  ┬
+│  │  │  │  └─ Gün (0-6, 0=Pazar)
+│  │  │  └──── Ay (1-12)
+│  │  └─────── Ayın hangi günü (1-31)
+│  └────────── Saat (0-23)
+└───────────── Dakika (0-59)
+
+Örneğin:
+
+30 2 * * * /usr/bin/backup_script.sh
+
+	•	Dakika: 30
+	•	Saat: 2 (02:30)
+	•	Ayın Günü: * (her gün)
+	•	Ay: * (her ay)
+	•	Haftanın Günü: * (her gün)
+	•	Komut: /usr/bin/backup_script.sh
+
+Bu örnekte her gece saat 02:30’da backup_script.sh çalışacaktır.
+
+Sık Kullanılan Karakterler
+	•	* : Tüm değerleri kapsar (ör. her dakika, her saat vb.)
+	•	, : Birden fazla değeri belirtmek için kullanılır (ör. 1,3,5 gibi).
+	•	- : Bir aralıktaki tüm değerleri belirtmek için (ör. 1-5 → 1,2,3,4,5).
+	•	/ : Artış adımı tanımlamak için (ör. */10 → her 10 dakikada bir).
+
+Örnekler:
+	1.	Her 5 dakikada bir çalıştırma
+
+*/5 * * * * /home/kullanici/scripts/log_kontrol.sh
+
+
+	2.	Hafta içi her sabah 8’de rapor oluşturma (Pazartesi=1, Cuma=5):
+
+0 8 * * 1-5 /home/kullanici/scripts/rapor_olustur.sh
+
+
+
+1.3. Günlük Hayattan Örnekler (crontab)
+	1.	Veritabanı yedeği almak:
+Her gece 03:15’te veritabanı yedeği alsın, ismi db_backup.sh olsun:
+
+15 3 * * * /home/kullanici/db_backup.sh
+
+
+	2.	Log arşivleme:
+Haftanın her Pazar günü 01:00’de /var/log klasöründeki log’ları arşivleyip silsin:
+
+0 1 * * 0 /home/kullanici/log_archive.sh
+
+
+
+
+2. at
+
+at komutu, tek seferlik zamanlanmış işler oluşturmak için kullanılır. Cron ile karşılaştırıldığında, cron periyodik veya tekrarlı işler için mükemmeldir; 
+at ise belirli bir tarihte ve saatte sadece bir defaya mahsus çalışacak işler için idealdir.
+
+2.1. at Komutu Kullanımı
+
+Genel kullanım:
+
+at [ZAMAN ifadesi]
+
+Ardından, bir etkileşimli mod açılır ve burada çalıştırmak istediğiniz komutları yazarsınız. Sonunda Ctrl + D (EOF) ile kaydedip çıkarsınız.
+
+Örnek:
+
+at 15:00
+uptime
+echo "Sistem kontrol edildi."
+# Ctrl + D (kaydet ve çık)
+
+Bu örnekte saat 15:00’te uptime komutunu çalıştıracak ve ardından ekrana “Sistem kontrol edildi.” mesajını yazacaktır.
+
+Zaman İfadeleri
+	•	at 10:00 → Bugün 10:00’da
+	•	at 9am → Bu sabah 09:00’da
+	•	at 5pm tomorrow → Yarın saat 17:00
+	•	at 10:00 03/28/2025 → Belirli bir tarihte ve saatte
+
+2.2. at Kuyruk Yönetimi
+	•	atq : Kullanıcının at kuyruklarını listeler.
+	•	atrm <job_id> : Belirli bir işi kuyruğundan siler.
+	•	at -c <job_id> : Kuyruktaki bir işi görüntülemek için kullanılır.
+
+2.3. Günlük Hayattan Örnekler (at)
+	1.	Tek seferlik hatırlatma:
+Örneğin, 2 saat sonra sistemin bir komut çalıştırmasını istiyorsunuz:
+
+at now + 2 hours
+echo "2 saat geçti, lütfen X işini yapmayı unutmayın." | mail -s "Hatırlatma" ali@ornek.com
+# Ctrl + D
+
+Bu sayede 2 saat sonra bir e-posta gönderir.
+
+	2.	Tek seferlik rapor oluşturma:
+Yarın sabah 7’de bir rapor oluştur:
+
+at 7am tomorrow
+/home/kullanici/scripts/gunluk_rapor.sh
+# Ctrl + D
+
+
+
+
+3. systemd timers
+
+Modern Linux sistemlerinde, systemd kullanılmaya başlandıktan sonra zamanlanmış işler için systemd timers özelliği de devreye girdi. 
+Cron’a benzer şekilde periyodik veya tek seferlik işleri planlamanıza izin verir. Üstelik log yönetimi, parallel job çalıştırma, 
+dependency (bağımlılıklar) yönetimi gibi ek avantajları olabilir.
+
+3.1. Temel Mantık
+
+systemd timer, bir veya birden çok systemd service dosyasını belirli aralıklarla veya belirlenen zamanlarda tetiklemek için kullanılır.
+
+Genellikle iki dosya oluşturulur:
+	1.	.service dosyası: Ne çalıştırılacağı bilgisini tanımlar (ör. hangi komutlar, hangi kullanıcı/izinle çalışacağı).
+	2.	.timer dosyası: Hangi zaman aralıkları veya hangi tarihlerde çalışacağı bilgisi.
+
+3.2. .service Dosyası Örneği
+
+Aşağıda /etc/systemd/system/daily_backup.service adlı bir service dosyası örneği verilmiştir:
+
+[Unit]
+Description=Günlük Yedek Alma Servisi
+
+[Service]
+Type=oneshot
+ExecStart=/home/kullanici/scripts/backup_script.sh
+User=kullanici
+
+	•	ExecStart ile hangi komutun çalışacağını belirtiyoruz.
+	•	User ayarı ile hangi kullanıcıyla çalışacağını belirleyebiliyoruz (Varsayılan root olabilir).
+
+3.3. .timer Dosyası Örneği
+
+Şimdi bu .service dosyasını, her gün belli bir saatte tetiklemek için /etc/systemd/system/daily_backup.timer dosyası:
+
+[Unit]
+Description=Günlük Yedek Alma Zamanlayıcısı
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
+	•	OnCalendar ifadesi, cron benzeri bir zaman tanımlamasıdır. Burada 03:00:00 → her gün sabah 3.
+	•	Persistent=true ile sistem kapalıyken tetikleme zamanı geçtiyse, sistem açıldığında eksik çalıştırmayı yapabilir.
+
+3.4. Timer’ı Etkinleştirme ve Kullanım
+	1.	Dosyaları (.service ve .timer) /etc/systemd/system/ içine koyun.
+	2.	Aşağıdaki komutlarla timer’ı etkinleştirin ve başlatın:
+
+sudo systemctl enable daily_backup.timer
+sudo systemctl start daily_backup.timer
+
+
+	3.	Timer durumunu görüntüleyin:
+
+systemctl status daily_backup.timer
+
+
+	4.	Ne zaman bir sonraki çalıştırmanın olacağını görmek için:
+
+systemctl list-timers
+
+
+
+3.5. Günlük Hayattan Örnek (systemd timers)
+	•	Haftalık temizlik:
+Bir cleanup.service dosyası düşünelim. İçinde /home/kullanici/scripts/cleanup.sh komutu çalışsın.
+Bir cleanup.timer oluşturup OnCalendar=weekly diyerek her hafta çalışmasını sağlayabiliriz.
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+
+Bu şekilde her haftanın ilk günü (sisteme göre genelde Pazar veya Pazartesi) o servisi tetikler.
+
+	•	Ayın ilk gününde rapor:
+
+[Timer]
+OnCalendar=*-*-01 00:30:00
+Persistent=true
+
+Bu tanım, her ayın 1. gününde saat 00:30’da çalıştırır.
+
+
+4. Karşılaştırma ve Seçim
+	1.	Cron:
+	•	Uzun yıllardır kullanılan, köklü bir sistem.
+	•	Periyodik işler için çok uygun.
+	•	Basit kullanım, “crontab -e” ile kişisel zamanlama dosyası.
+	2.	at:
+	•	Tek seferlik işler için ideal.
+	•	“Şu an + 2 saat sonra” gibi esnek zaman ifadesi.
+	•	Tekrar etmeyen görevler için basitlik sağlar.
+	3.	systemd timers:
+	•	Modern sistemlerde cron yerine veya yanında tercih edilebilir.
+	•	Servis mantığıyla entegre çalışır, log yönetimi ve bağımlılık yönetimi daha gelişmiştir.
+	•	Özellikle systemd tabanlı dağıtımlarda (örneğin Ubuntu, CentOS 7+, Fedora vb.) kullanmak avantaj sağlayabilir.
+
+Özetle:
+	•	Sık sık ve düzenli tekrar eden işler için cron veya systemd timer kullanılabilir.
+	•	Tek seferlik bir gelecek tarihli iş için at çok daha pratiktir.
+
+
+5. Ek Öneriler
+	1.	Log Tutma:
+	•	Cron çıktısını bir dosyaya yönlendirebilir veya /var/log/syslog (Debian/Ubuntu) veya /var/log/cron (CentOS/RHEL) üzerinden takip edebilirsiniz.
+	•	systemd timers için journalctl -u <service_name> kullanabilirsiniz.
+	2.	Ortak Script Kullanımı:
+	•	Aynı script’i hem cron hem systemd timer ile çağırabilirsiniz. Script içerisinde loglama, e-posta bilgilendirme vb. yaparak işlerinizi daha 
+  izlenebilir hale getirin.
+	3.	Hata Durumları:
+	•	Cron’da bir iş hata verirse, varsayılan olarak kullanıcının mail kutusuna (yerel mail) rapor gönderir.
+	•	systemd’de bir servis hata verirse, systemctl status çıktısında görebilirsiniz.
+	4.	Zaman Dilimi ve Saat Ayarları:
+	•	Sunucunun sistem saatini (TZ) doğru ayarladığınızdan emin olun.
+	•	Farklı bir zaman dilimi kullanacaksanız environment değişkeni veya OnCalendar içerisindeki UTC vb. ayarlarla oynamanız gerekebilir.
+
