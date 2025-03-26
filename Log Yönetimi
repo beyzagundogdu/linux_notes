@@ -1,0 +1,142 @@
+1. /var/log/ Dizini
+
+1.1. Genel Bakış
+	•	Tüm log (kayıt) dosyalarının bulunduğu ana klasördür.
+	•	Sistem, uygulama ve güvenlik kayıtlarının çoğunu burada bulabilirsiniz.
+
+1.2. Örnek Önemli Dosyalar
+	•	/var/log/syslog veya /var/log/messages: Genel sistem olaylarını (servis başlangıcı, hatalar vb.) içerir.
+	•	Debian/Ubuntu’da genelde /var/log/syslog
+	•	Red Hat/CentOS gibi dağıtımlarda /var/log/messages
+	•	/var/log/auth.log veya /var/log/secure: Kullanıcı giriş-çıkışları, SSH bağlantıları, sudo kullanımları ve yetkilendirme işlemleriyle ilgili kayıtlar.
+	•	/var/log/kern.log: Çekirdek (kernel) mesajlarıyla ilgili kayıtlar.
+	•	/var/log/dpkg.log, /var/log/yum.log: Paket yöneticisi işlemleri (yükleme, güncelleme, kaldırma) hakkında kayıtlar.
+
+1.3. Somut Örnekler
+
+Örnek 1: Sistem Loglarını Gerçek Zamanlı İzleme
+
+Sistemde yeni bir servis başlıyor mu, hata mı veriyor, bunu canlı görmek istiyorsanız:
+
+sudo tail -f /var/log/syslog
+
+	•	tail -f ile dosyadaki yeni satırlar anında ekrana gelir.
+	•	Diyelim ki yeni bir servis olan myservice başlatıldı, anlık olarak başlayan/kapanan servis mesajlarını görebilirsiniz.
+
+Örnek 2: Hata (Error) Aramak
+
+Disk sorunları veya uygulama hataları yaşıyorsanız, sistem loglarında “error” veya “fail” gibi kelimeleri arayarak ipucu bulabilirsiniz:
+
+grep -i "error" /var/log/syslog
+
+	•	-i (ignore case) seçeneği, büyük/küçük harf ayrımı yapmadan arama yapar.
+	•	Benzer şekilde:
+
+grep -i "fail" /var/log/syslog
+
+
+
+Örnek 3: Dönmüş (Arşiv) Log Dosyalarını Kontrol Etme
+
+Log dosyaları zamanla büyüdüğü için logrotate gibi araçlarla syslog.1, syslog.2.gz şeklinde arşivlenir. Örneğin, geçtiğimiz haftaki logları incelemek isterseniz:
+
+zcat /var/log/syslog.2.gz | grep "timeout"
+
+	•	zcat, sıkıştırılmış (.gz) log dosyalarını açıp ekrana basar.
+	•	Bu sayede eski kayıtlarda “timeout” (örneğin, ağ kesintisi) veya benzer bir hata arayabilirsiniz.
+
+
+
+2. dmesg – Çekirdek (Kernel) Mesajları
+
+2.1. Genel Bakış
+	•	Sistem açılışından itibaren çekirdek tarafından üretilen mesajlar burada görülür.
+	•	Donanım tanıma, sürücü yükleme, çekirdek hataları gibi önemli bilgileri içerir.
+
+2.2. Somut Örnekler
+
+Örnek 1: Donanım Takip Etme (USB Örneği)
+
+USB belleği taktığınızda sistemin tanıyıp tanımadığını öğrenmek için:
+
+dmesg | grep -i usb
+
+	•	Eğer USB disk düzgün bağlanmadıysa, hataları veya uyarıları bu satırlarda görebilirsiniz (örneğin, “unrecognized USB device” gibi).
+
+Örnek 2: dmesg Çıktısını Zaman Damgası İle Görme
+
+Bazı Linux dağıtımları, dmesg -T parametresini destekler. Bu sayede dmesg çıktısını okunabilir tarih-saat biçiminde alabilirsiniz:
+
+dmesg -T | less
+
+	•	less kullanarak sayfa sayfa gezinebilirsiniz.
+	•	Bu sayede sistemin hangi dakikada hangi mesajı verdiğini takip etmek kolaylaşır.
+
+Örnek 3: Anlık Takip (Gerçek Zamanlı)
+
+Çekirdek mesajlarını anlık izlemek isterseniz bazı dağıtımlarda:
+
+dmesg --follow
+
+	•	Yeni oluşan çekirdek mesajları ekranda anında görüntülenir.
+
+
+
+3. syslog – Sistemdeki Olayların Merkezi Log Dosyası
+
+3.1. Genel Bakış
+	•	Birçok servis ve uygulama, günlük (log) mesajlarını syslog protokolüyle gönderir.
+	•	Debian/Ubuntu üzerinde /var/log/syslog, Red Hat/CentOS üzerinde /var/log/messages benzeri isimlerde bulunur.
+
+3.2. Somut Örnekler
+
+Örnek 1: Syslog Dosyasını Gerçek Zamanlı Takip
+
+Aşağıdaki komutla, sistemde o anda gerçekleşen olayların satır satır ekrana yansıdığını görebilirsiniz:
+
+tail -f /var/log/syslog
+
+	•	Mesela, ağ bağlantısı koptuğunda NetworkManager veya systemd-networkd servisinden gelen hata mesajlarını buradan takip edebilirsiniz.
+
+Örnek 2: Kullanıcı İşlemlerini Takip Etme
+
+Uygulama bazlı mesajlar (örneğin, cron görevleri) da syslog’a yazılabilir. Cron ile çalıştırılan bir komutun ne zaman başlatıldığını veya hata verip
+vermediğini görmek için syslog’u inceleyebilirsiniz:
+
+grep CRON /var/log/syslog
+
+	•	Böylece CRON tarafındaki çalışmalara dair kayıtları yakalarsınız.
+
+Örnek 3: Manuel Olarak Log Göndermek (logger Komutu)
+
+Sisteme kendi mesajınızı eklemek isterseniz:
+
+logger "Bu bir test log mesajıdır."
+
+	•	Bu komut syslog’a bir satır ekler.
+	•	Ardından:
+
+tail -n 1 /var/log/syslog
+
+ile eklediğiniz mesajı görebilirsiniz. Bu, test amacıyla veya script’lerinizin syslog’a not düşmesi için kullanışlıdır.
+
+
+
+4. Tipik Senaryolar
+
+Aşağıda, log yönetimi araçlarını birleştirerek yaşanabilecek tipik sorunların nasıl çözülebileceğine dair birkaç örnek senaryo paylaşıyorum:
+	1.	Sunucuya Uzaktan Erişim Sorunu (SSH bağlantısı reddediliyor)
+	•	/var/log/auth.log veya /var/log/secure dosyasına bakarak bağlantı isteğinin kayda geçip geçmediğini kontrol edin.
+	•	Eğer bir hata veya yetkilendirme sorunu varsa “Failed password” gibi mesajlarla karşılaşırsınız.
+	•	Gerekirse grep -i "fail" /var/log/auth.log komutuyla hızlı arama yapabilirsiniz.
+	2.	USB Diski Görmüyor veya Bağlanmıyor
+	•	dmesg | grep -i usb ile çekirdek mesajlarında hata olup olmadığına bakın.
+	•	Cihazın algılanmaması, “unknown device” veya “descriptors error” gibi uyarılarla kendini belli eder.
+	•	Bağlandıysa syslog’da (/var/log/syslog) veya dmesg’de sdb gibi bir disk oluştuğuna dair mesajları görebilirsiniz.
+	3.	Web Sunucusu (Örneğin Apache) Çalışmıyor
+	•	/var/log/apache2/ (Debian/Ubuntu) veya /var/log/httpd/ (Red Hat/CentOS) altındaki error.log dosyasını inceleyin.
+	•	Ayrıca sistem genelinde grep apache /var/log/syslog komutuyla bir ipucu olup olmadığına bakın.
+	4.	Yeni Yazıcı Eklendi, Çalışmıyor
+	•	dmesg | grep -i printer veya dmesg | grep -i usb komutlarını deneyerek çekirdek seviyesinde tespit edilemeyen bir hata olup olmadığına bakın.
+	•	Bazı dağıtımlarda cups servisiyle ilgili log dosyaları /var/log/cups/ altında bulunabilir.
+
