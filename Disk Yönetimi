@@ -1,0 +1,171 @@
+1. df – Disk Alanı Kullanımını Görüntüleme
+
+Özellikleri:
+	•	Bağlı (mounted) dosya sistemlerinin toplam, kullanılan ve boş alanlarını listeler.
+	•	Sistemde hangi dosya sistemlerinin hangi bölümlerde yer aldığını hızlıca görmek için idealdir.
+
+Temel Kullanım:
+
+df -h
+
+	•	-h: Çıktıyı insan tarafından okunabilir (KB, MB, GB) formatta gösterir.
+
+Örnek Senaryo:
+Bir sunucuda hangi disk bölümünde ne kadar alan kullanıldığını öğrenmek için:
+
+$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1        50G   20G   28G  42% /
+/dev/sdb1       100G   70G   25G  75% /home
+
+Burada, /dev/sda1 ana sistem bölümü ve /dev/sdb1 kullanıcı verilerinin bulunduğu bölüm olarak listelenmiştir. Böylece hangi bölümde daha fazla boş alan olduğunu hızlıca görebilirsiniz.
+
+
+
+2. du – Dizin ve Dosya Bazında Disk Kullanımını Ölçme
+
+Özellikleri:
+	•	Belirli bir dizin veya dosyanın kapladığı disk alanını hesaplar.
+	•	Büyük dizinlerde hangi alt dizinlerin ne kadar yer kapladığını görmek için kullanışlıdır.
+
+Temel Kullanım:
+
+du -sh /path/to/directory
+
+	•	-s: Sadece özet bilgi verir, yani toplam kullanım.
+	•	-h: Çıktıyı insan tarafından okunabilir formatta gösterir.
+
+Örnek Senaryo:
+Örneğin, /var/log dizininin ne kadar yer kapladığını öğrenmek için:
+
+$ du -sh /var/log
+120M    /var/log
+
+Bu komut, /var/log dizinindeki tüm log dosyaları ve alt dizinlerin toplamda yaklaşık 120 MB yer kapladığını belirtir.
+
+
+
+3. mount ve umount – Dosya Sistemlerini Bağlama ve Çözme
+
+mount
+
+Özellikleri:
+	•	Bir disk bölümünü veya harici cihazı, önceden oluşturulmuş bir mount point (bağlama noktası) dizinine bağlar.
+	•	Dosya sistemine erişimi sağlar.
+
+Temel Kullanım:
+
+mount /dev/sdb1 /mnt/usb
+
+	•	/dev/sdb1: Bağlanacak cihaz veya bölüm.
+	•	/mnt/usb: Cihazın erişileceği dizin. Bu dizin önceden oluşturulmuş olmalıdır.
+
+Örnek Senaryo (USB Sürücü Bağlama):
+	1.	USB cihazı taktığınızda, cihazın hangi bölüm olarak tanımlandığını görmek için:
+
+lsblk
+
+
+	2.	Bağlama noktası olarak kullanılacak dizini oluşturun:
+
+mkdir -p /mnt/usb
+
+
+	3.	USB sürücüyü mount edin:
+
+mount /dev/sdb1 /mnt/usb
+
+
+	4.	Artık /mnt/usb dizini üzerinden USB sürücünüzdeki dosyalara erişebilirsiniz.
+
+umount
+
+Özellikleri:
+	•	Mount edilmiş dosya sistemini güvenli bir şekilde sistemden ayırır.
+	•	Cihazı çıkarmadan önce mutlaka umount işlemi yapılmalıdır.
+
+Temel Kullanım:
+
+umount /mnt/usb
+
+Örnek Senaryo (USB Sürücü Çözme):
+USB sürücüyü çıkarmadan önce bağlı dosya sistemini güvenli şekilde ayırmak için:
+
+umount /mnt/usb
+
+	•	Eğer “device is busy” hatası alırsanız, ilgili dizinde açık dosya veya işlem olup olmadığını kontrol edin.
+
+
+
+4. fdisk – Disk Bölümleri Üzerinde İşlemler Yapma (MBR Tabanlı Disklerde)
+
+Özellikleri:
+	•	İnteraktif bir araç olup, disk bölümleme (partitioning) işlemlerinde kullanılır.
+	•	MBR (Master Boot Record) tabanlı disklerde yeni bölüm oluşturma, silme veya mevcut bölümleri listeleme gibi işlemleri gerçekleştirir.
+
+Temel Kullanım:
+
+fdisk /dev/sda
+
+Komut İpuçları:
+	•	p: Mevcut bölümleri listelemek.
+	•	n: Yeni bir bölüm oluşturmak.
+	•	d: Var olan bir bölümü silmek.
+	•	w: Yapılan değişiklikleri kaydedip çıkmak.
+
+Örnek Senaryo (Yeni Bölüm Oluşturma):
+	1.	Diskin mevcut bölüm tablosunu görüntüleyin:
+
+fdisk /dev/sda
+Command (m for help): p
+
+
+	2.	Yeni bir bölüm eklemek için:
+
+Command (m for help): n
+
+	•	Burada istenen bölüm tipi (primary veya extended) ve boyut bilgilerini girin.
+
+	3.	İşlemleri tamamladıktan sonra değişiklikleri diske yazın:
+
+Command (m for help): w
+
+
+
+Önemli Not: Yanlış bir işlem, veri kaybına neden olabilir. Herhangi bir bölümleme işlemi yapmadan önce mutlaka yedeklerinizi alın.
+
+
+
+5. parted – Gelişmiş Bölüm Yönetimi (MBR ve GPT)
+
+Özellikleri:
+	•	Hem MBR hem de GPT disklerde çalışabilen gelişmiş bir bölümleme aracıdır.
+	•	Script desteği sunar ve büyük disklerde daha esnek bölümleme seçenekleri sağlar.
+
+Temel Kullanım:
+
+parted /dev/sda
+
+Sık Kullanılan Alt Komutlar:
+	•	mklabel: Diskin bölüm tablosu türünü belirler (örneğin, gpt veya msdos).
+	•	mkpart: Yeni bir bölüm oluşturur.
+	•	print: Mevcut bölüm tablosunu gösterir.
+
+Örnek Senaryo (GPT Bölüm Tablosu Oluşturma ve Bölüm Ekleme):
+	1.	Diskin bölüm tablosunu GPT olarak ayarlayın:
+
+(parted) mklabel gpt
+
+
+	2.	Yeni bir bölüm oluşturun:
+
+(parted) mkpart primary ext4 1MiB 100%
+
+	•	Bu komut, 1 MiB’den başlayarak diskin tamamını kapsayan bir bölüm oluşturur.
+
+	3.	İşlemi tamamladıktan sonra:
+
+(parted) quit
+
+
+Önemli Not: parted, özellikle GPT yapısındaki disklerde fdisk’e göre daha avantajlıdır. Ancak bölümleme işlemleri öncesinde yine verilerinizi yedeklemeniz çok önemlidir.
