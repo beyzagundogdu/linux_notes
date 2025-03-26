@@ -1,0 +1,100 @@
+1. ps
+	•	İşlev:
+Sisteminizde çalışan tüm süreçleri listeler.
+	
+  •	Kullanım Örnekleri:
+	•	Tüm süreçleri listeleme:
+ps aux
+
+  •	Geniş formatlı listeleme:
+ps -ef
+
+	•	Belirli bir süreci arama (örneğin: my_script.py):
+ps aux | grep my_script.py
+
+
+
+2. top
+	•	İşlev:
+Süreçlerin ve sistem kaynaklarının (CPU, bellek vb.) gerçek zamanlı görüntüsünü sağlar.
+	
+  •	Kullanım Örneği:
+top
+
+  •	Interaktif Kontroller:
+	•	k: Seçili süreci öldürmek için PID girilmesini sağlar.
+	•	r: Sürecin önceliğini değiştirmek için (renice).
+	•	q: Çıkış.
+
+
+3. htop
+	•	İşlev:
+top komutunun daha kullanıcı dostu, renkli ve interaktif versiyonudur.
+	
+  •	Kullanım Örneği:
+htop
+
+  •	Özellikler:
+	•	Klavye ok tuşlarıyla süreç seçimi.
+	•	F6: Sıralama ölçütünü değiştirme.
+	•	F9: Seçili süreci sonlandırma.
+
+
+4. kill
+	•	İşlev:
+Belirli bir PID’ye sinyal göndererek süreci sonlandırır veya kontrol eder.
+	
+  •	Kullanım Örnekleri:
+	•	Normal sonlandırma (SIGTERM, varsayılan):
+kill 1234
+
+	•	Zorla sonlandırma (SIGKILL):
+kill -9 1234
+
+	•	Farklı sinyal gönderme (örneğin SIGHUP):
+kill -HUP 1234
+
+
+
+5. pkill
+	•	İşlev:
+Süreçleri isim veya desen bazında hedef alarak sinyal gönderir.
+	
+  •	Kullanım Örnekleri:
+	•	Belirli isimdeki tüm süreçleri sonlandırma:
+pkill firefox
+
+
+	•	Zorla sonlandırma (SIGKILL) örneği:
+pkill -9 firefox
+
+
+	•	İsim desenine dayalı işlem yapma:
+pkill -f my_script.py
+
+
+
+6. nice
+	•	İşlev:
+Yeni başlatılan süreçlere CPU zaman paylaşımında öncelik değeri (niceness) atar.
+
+  •	Kullanım Örnekleri:
+	•	Düşük öncelikli bir süreç başlatma:
+nice -n 10 my_program
+
+	•	Yüksek öncelikli bir süreç başlatma (yönetici yetkisi gerektirir):
+sudo nice -n -5 my_program
+
+
+
+
+7. renice
+	•	İşlev:
+Çalışan bir sürecin öncelik değerini (niceness) değiştirir.
+	
+  •	Kullanım Örnekleri:
+	•	Tek bir sürecin niceness değerini değiştirme:
+renice -n 5 -p 2345
+
+	•	Birden fazla süreç için aynı anda değiştirme:
+renice -n 10 -p 2345 5678
