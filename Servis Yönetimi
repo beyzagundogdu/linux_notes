@@ -1,0 +1,98 @@
+1. systemctl
+
+**systemctl**, systemd tabanlı sistemlerde servis yönetimi için kullanılan temel araçtır.
+
+### Temel Komutlar
+- **Servis Başlatma:**
+  ```bash
+  systemctl start <servis_adı>
+  # Örnek: systemctl start apache2
+
+	•	Servis Durdurma:
+
+systemctl stop <servis_adı>
+# Örnek: systemctl stop apache2
+
+
+	•	Servis Yeniden Başlatma:
+
+systemctl restart <servis_adı>
+# Örnek: systemctl restart apache2
+
+
+	•	Servis Durumunu Görüntüleme:
+
+systemctl status <servis_adı>
+# Örnek: systemctl status apache2
+
+
+	•	Servisi Otomatik Başlatma:
+
+systemctl enable <servis_adı>
+# Örnek: systemctl enable sshd
+
+
+	•	Servisi Otomatik Başlatmayı Devre Dışı Bırakma:
+
+systemctl disable <servis_adı>
+
+
+2. service
+
+service komutu, SysV init tabanlı sistemlerde ve bazı modern sistemlerde geriye dönük uyumluluk için kullanılır.
+
+Temel Komutlar
+	•	Servis Başlatma:
+
+service <servis_adı> start
+# Örnek: service apache2 start
+
+
+	•	Servis Durdurma:
+
+service <servis_adı> stop
+
+
+	•	Servis Yeniden Başlatma:
+
+service <servis_adı> restart
+
+
+	•	Servis Durumunu Görüntüleme:
+
+service <servis_adı> status
+
+
+
+Not: Modern sistemlerde systemctl tercih edilir, ancak bazı durumlarda service komutu ile karşılaşabilirsiniz.
+
+3. journalctl
+
+journalctl, systemd journal loglarını görüntülemek ve analiz etmek için kullanılır.
+
+Temel Komutlar
+	•	Belirli Servisin Logları:
+
+journalctl -u <servis_adı>
+# Örnek: journalctl -u apache2
+
+
+	•	Canlı Log Takibi:
+
+journalctl -f
+
+
+	•	Detaylı Hata Bilgisi:
+
+journalctl -xe
+
+
+	•	Belirli Zaman Aralığındaki Loglar:
+
+journalctl --since "YYYY-MM-DD HH:MM:SS" --until "YYYY-MM-DD HH:MM:SS"
+
+
+	•	Son Boota Ait Loglar:
+
+journalctl -b
+
