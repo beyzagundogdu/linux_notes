@@ -1,0 +1,72 @@
+1. useradd – Yeni Kullanıcı Oluşturma
+	
+  •	Kullanım: useradd [seçenekler] KULLANICI_ADI
+	•	Önemli Parametreler:
+	•	-m: Home dizini oluşturur.
+	•	-d: Home dizin yolunu özelleştirir.
+	•	-s: Kabuk (ör. /bin/bash) atar.
+	•	-g: Birincil grup atar.
+	•	-G: Ek gruplar belirler (virgülle ayrılmış).
+	 
+Önemli Nokta: useradd tek başına parola sormaz. Parolayı ayrıca passwd veya chpasswd ile ayarlamak gerekir.
+
+
+
+2. usermod – Mevcut Kullanıcıyı Düzenleme
+
+  •	Kullanım: usermod [seçenekler] KULLANICI_ADI
+	•	Önemli Parametreler:
+	•	-s: Kullanıcının giriş kabuğunu değiştirir.
+	•	-d: Home dizin yolunu değiştirir; -m eklerseniz mevcut dosyalar yeni dizine taşınır.
+	•	-g: Birincil grubu değiştirir.
+	•	-G: Ek grupları yeniden ayarlar (var olanları siler).
+	•	-aG: Mevcut ek gruplara ek olarak yeni gruplar ekler (önemli fark!).
+	•	-l: Kullanıcı adını değiştirir.
+	•	-L / -U: Kullanıcı hesabını kilitler/açar.
+	
+Önemli Nokta: -G tek başına kullanıldığında tüm ek grup üyelikleri sıfırlanır; ekleme yapmak için -aG kullanılmalı.
+
+
+3. passwd – Parola Yönetimi
+	
+  •	Kullanım: passwd [KULLANICI_ADI]
+	•	Temel Fonksiyonlar:
+	•	Parola belirlemek veya değiştirmek.
+	•	-l kullanıcıyı kilitlemek, -u kilidi açmak.
+	•	--expire ile sonraki girişte parola güncellemesini zorlamak.
+	
+Önemli Nokta: Yetkiliyseniz (root/sudo), başka bir kullanıcının parolasını değiştirebilirsiniz. Kullanıcı adı girilmezse kendi parolanız için işlem yapar.
+
+
+4. groups – Kullanıcının Üye Olduğu Grupları Listeleme
+	
+  •	Kullanım: groups [KULLANICI_ADI]
+	
+Önemli Nokta: Kullanıcı adı verilmezse, komutu çalıştıran kullanıcının gruplarını gösterir.
+
+
+5. groupmod – Grup Düzenleme
+	•	Kullanım: groupmod [seçenekler] GRUP_ADI
+	•	Temel Parametreler:
+	•	-n YENI_GRUP_ADI: Grup adını değiştirir.
+	•	-g YENI_GID: Grup ID’sini değiştirir.
+		
+Önemli Nokta: Mevcut gruplar üzerinde ad veya ID değişikliği yaparken kullanıcıların grup üyeliklerine dikkat edin (özellikle GID değişikliklerinde olası çakışmalar).
+
+
+6. gpasswd – Grup Parolası ve Üyelik Yönetimi
+	•	Kullanım: gpasswd [seçenekler] GRUP_ADI
+	•	Temel Fonksiyonlar:
+	•	-a / -d: Gruba kullanıcı ekleme/çıkarma.
+	•	-r: Grup parolasını kaldırma.
+	•	-A: Grup yöneticilerini belirleme.
+	•	-M: Bir defada tüm üyeleri tanımlama (önceki üyeliği siler).
+	
+Önemli Nokta: Grup parolası sık kullanılmasa da, grup yöneticisi atamak veya toplu üye eklemek için kullanılır.
+
+
+Önemli Genel Bilgiler
+	•	Yönetici Yetkisi: Kullanıcı ve grup yönetimi genellikle sudo veya root yetkisi gerektirir.
+	•	Home Dizin ve Parola: useradd sonrası parola atamayı unutmayın. -m parametresi olmadan home dizini varsayılan olarak oluşturulmayabilir (dağıtıma göre değişebilir).
+	•	/etc/passwd ve /etc/shadow: Kullanıcı bilgileri (ID, kabuk, home dizini) /etc/passwd’de saklanır. Asıl parola bilgisi ise /etc/shadow dosyasında şifrelenmiş olarak bulunur.
+	•	Ek Gruplar: usermod -G mevcut ek grupları sıfırlayarak yenisini atar. Ekleme yapmak için usermod -aG kullanılmalıdır.
