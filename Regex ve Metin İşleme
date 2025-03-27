@@ -1,0 +1,279 @@
+1. Regex (Regular Expressions) Nedir?
+
+Düzenli ifadeler (Regular Expressions – kısaca regex), metin içinde belirli kalıpları (pattern) yakalamak, eşleştirmek veya değiştirmek için kullanılan güçlü bir yöntemdir. Özellikle günlük hayatta:
+	•	Dosyalardaki belirli satırları veya kelimeleri çekmek,
+	•	Log dosyalarından belirli hata mesajlarını filtrelemek,
+	•	Yazılardaki telefon numaraları, e-posta adresleri, IP adresleri gibi düzenli yapıları yakalamak
+gibi işlemler için kullanılır.
+
+1.1. Yaygın Regex Örnekleri
+	•	^ : Satır başı.
+	•	$ : Satır sonu.
+	•	. : Herhangi bir karakter (yeni satır hariç).
+	•	* : Önceki ifadenin 0 veya daha fazla tekrarını bul.
+	•	+ : Önceki ifadenin 1 veya daha fazla tekrarını bul.
+	•	? : Önceki ifadenin 0 veya 1 tekrarını bul.
+	•	[abc] : a, b veya c karakteri.
+	•	[0-9] : 0’dan 9’a kadar herhangi bir rakam.
+	•	[^x] : x hariç herhangi bir karakter.
+	•	() : Gruplama için kullanılır.
+	•	| : “veya” anlamı katar (alternation).
+
+Örneğin ^[0-9]+$ ifadesi, “baştan sona kadar sadece rakamlardan oluşan satırları” yakalar (ör. 123, 4567).
+
+
+
+2. awk
+
+awk güçlü bir metin işleme aracıdır. Genellikle satırları okuyup belirli sütunlara (fields) ayırarak işlem yapmamıza izin verir. (Varsayılan sütun ayırıcı boşluk veya tab’dır, ancak -F parametresiyle veya BEGIN { FS="ayırıcı" } bloklarıyla farklı ayırıcılar tanımlayabilirsiniz.)
+
+2.1. Temel Kullanım
+
+awk 'pattern {action}' dosya.txt
+
+	•	pattern : Satırın hangi koşullarda eşleşeceği (regex, ifade vb.).
+	•	action  : Eşleşen satır(lar) için yapılacak işlem.
+
+Örnekler
+	1.	Her satırın 1. sütununu ekrana yazmak:
+
+awk '{ print $1 }' dosya.txt
+
+	•	Burada pattern yok, tüm satırlar için $1 (birinci sütun) yazdırılır.
+
+	2.	Satırda ‘ERROR’ geçen satırları yakalamak:
+
+awk '/ERROR/ { print $0 }' log.txt
+
+	•	/ERROR/ kısmı bir regex pattern’dir. Bu ifadesi ERROR kelimesi geçen satırları bulur, { print $0 } o satırı ekrana basar ($0 satırın tamamını temsil eder).
+
+	3.	Belirli bir alanda matematiksel işlem yapmak:
+Örneğin, CSV dosyasında isim,soyisim,maas alanları olsun. Maaş kolonu 3. sütunda. Maaşı 5000’den büyük olan kişileri listeleyelim:
+
+awk -F, '$3 > 5000 { print $1, $2, $3 }' calisanlar.csv
+
+	•	-F, virgülü ayırıcı olarak kullanacağımız anlamına gelir.
+	•	$3 > 5000 → 3. sütun 5000’den büyükse, { print $1, $2, $3 }.
+
+2.2. Günlük Hayattan Senaryo (awk)
+	•	Web sunucu logu analizi:
+Apache/Nginx loglarında genellikle şu tip satırlar vardır:
+
+192.168.1.100 - - [24/Mar/2025:10:15:21 +0300] "GET /index.html HTTP/1.1" 200 1024
+
+IP adresi 1. sütun, HTTP yöntemi/sayfa 6. sütunda, HTTP durumu (200, 404 vb.) 9. sütunda yer alabilir (örnek format).
+
+awk '{ print $1, $9 }' access.log
+
+Bu komut, her satırda IP adresi ve HTTP durum kodunu ekrana basar. 200 dönen istekleri saymak istersek:
+
+awk '$9 == 200 { count++ } END { print "200 Olan istek sayısı:", count }' access.log
+
+
+
+
+3. sed
+
+sed (stream editor), satırları sırayla okuyup düzenleyen, arama-değiştirme (find-replace) dahil olmak üzere güçlü işlemleri yapabilen bir akış editörüdür. awk ile kesme/bölme/sayma işlemlerini yaparken, sed daha çok “metin içi dönüştürme” (text transformation) görevlerinde öne çıkar.
+
+3.1. Temel Kullanım
+
+sed 's/aranan/yenisi/g' dosya.txt
+
+	•	s : substitution (değiştirme) komutu.
+	•	aranan : Değiştirilecek ifade (regex de olabilir).
+	•	yenisi : Yeni ifade.
+	•	g : Global, yani satır içinde birden fazla geçiyorsa hepsini değiştir.
+
+Örnekler:
+	1.	Bir dosyada “Ali” kelimesini “Ahmet” olarak değiştirmek:
+
+sed 's/Ali/Ahmet/g' eski.txt > yeni.txt
+
+
+	2.	Satırların başına “LOG:” eklemek:
+
+sed 's/^/LOG: /' logs.txt
+
+	•	Burada ^ regex ifadesi, satır başını temsil eder. Bu komut her satırın başına LOG:  ekler.
+
+	3.	Belirli bir satır aralığında değişiklik yapmak:
+Örneğin, 5. satırdan 10. satıra kadar olan metinlerde “test”i “demo” yapmak istiyorsak:
+
+sed '5,10 s/test/demo/g' dosya.txt
+
+
+	4.	Dosya üzerinde kalıcı değişiklik yapmak:
+
+sed -i 's/eski/yeni/g' dosya.txt
+
+	•	-i parametresi, “in-place edit” anlamına gelir. Yani dosyanın kendisini düzenler.
+
+3.2. Günlük Hayattan Senaryo (sed)
+	•	Konfigürasyon dosyasında ayar değiştirmek:
+Diyelim ki bir konfigürasyon dosyasında listen=80 yazan satırı listen=8080 yapmak istiyoruz:
+
+sed -i 's/listen=80/listen=8080/' /etc/ornek.conf
+
+
+	•	Metin dosyasından HTML etiketlerini temizlemek (örneğin, <p> veya </p> yi silmek):
+
+sed 's/<\/\?p>//g' metin.html > temizlenmis.txt
+
+	•	Burada <\/\?p>: <p> veya </p> etiketini ifade eder. ? işareti önceki karakterin 0 veya 1 kez tekrarını belirtir (/ karakteri önce, \<\/?p\>).
+
+
+
+4. cut
+
+cut, bir satırdaki belirli sütunları veya karakterleri kesip almak için kullanılır.
+
+4.1. Temel Kullanım
+
+cut -d 'AYIRICI' -f ALAN_NO dosya
+
+	•	-d : Ayırıcı karakter (delimiter) tanımlar.
+	•	-f : Kaçıncı alanı alacağımızı söyler. (Virgülle birden fazla belirtilebilir: -f 1,3 gibi.)
+
+Örnekler:
+	1.	Virgülle ayrılmış bir CSV’de 2. sütunu almak:
+
+cut -d ',' -f 2 calisanlar.csv
+
+
+	2.	Kullanıcı bilgilerini “:” ile ayrılmış /etc/passwd dosyasından sadece 1. ve 3. alanı çekmek:
+(Genelde 1. alan kullanıcı adı, 3. alan ise UID değeridir.)
+
+cut -d ':' -f1,3 /etc/passwd
+
+
+	3.	Karakter bazında kesim:
+cut -c 1-5 dosya.txt, her satırın 1’den 5’e kadar olan karakterlerini gösterir.
+
+4.2. Günlük Hayattan Senaryo (cut)
+	•	Sunucularda bulunan paket listesinde sadece paket isimlerini çekmek:
+Örneğin dpkg -l çıktısı ilk birkaç karakteri sistem bilgisi, sonrasını paket ismi gibi veriyor diyelim.
+
+dpkg -l | cut -c 5-50
+
+gibi bir yaklaşım, belirli karakter aralığını kesip almak için kullanılabilir (ihtiyaca göre düzenlenir).
+
+	•	Telefon numaralarını sadece ülke kodu ve alan kodu ile almak**:
+Elinizde şu tarz satırlar olsun: +90-555-1234567. Sadece ülke kodunu ve 555 kısmını kesmek isterseniz:
+
+echo "+90-555-1234567" | cut -d '-' -f 1,2
+
+Çıktı: +90-555.
+
+
+
+5. sort
+
+sort komutu, dosya veya standart girdiyi sıralamak için kullanılır. Numerik, alfabetik, ters vb. sıralama seçenekleri mevcuttur.
+
+5.1. Temel Kullanım
+
+sort dosya.txt
+
+Bu, dosya.txt içeriğini alfabetik sıralar ve ekrana basar.
+
+Parametreler
+	•	-n : Numerik sıralama. (Yani sayısal değere göre)
+	•	-r : Tersine (reverse) sıralama.
+	•	-k : Hangi sütuna göre sıralanacağını belirtir (örn. -k2 → 2. sütuna göre sıralama).
+	•	-t : Sütun ayırıcı karakter tanımlamak için. (örn. -t, → virgül)
+
+Örnekler:
+	1.	Sayıları küçükten büyüğe sıralama:
+
+sort -n sayilar.txt
+
+
+	2.	Bir CSV dosyasında 3. sütuna göre azalan sıralama:
+
+sort -t ',' -k3 -r calisanlar.csv
+
+
+	3.	Sütun 2’yi numerik olarak, sütun 3’ü ise alfabetik olarak sıralama (karmaşık bir örnek):
+
+sort -t ',' -k2,2n -k3,3 calisanlar.csv
+
+
+
+5.2. Günlük Hayattan Senaryo (sort)
+	•	Log dosyasında IP adreslerini sıralamak:
+Basit bir şekilde IP adreslerini sıralamak isterseniz:
+
+cat iplist.txt | sort
+
+(Dikkat: IP sıralaması alfabetik yapılırsa 10.0.0.1 ile 2.0.0.1 arasında farklılık olabilir. Numerik IP sıralama için daha gelişmiş komutlar veya ek manipülasyon gerekebilir.)
+
+	•	Satış rakamları dosyasını en yüksekten en düşüğe sıralamak:
+Eğer sales.csv dosyasında 2. sütunda satış rakamları varsa:
+
+sort -t ',' -k2 -n -r sales.csv
+
+
+
+
+
+6. uniq
+
+uniq komutu, tekrar eden (duplicate) satırları filtrelemek, saymak veya listelemek için kullanılır. Ancak uniq’in yalnızca sıralı tekrarları yakaladığını unutmamak gerekir. Bu nedenle genelde sort ile birlikte kullanılır.
+
+6.1. Temel Kullanım
+
+uniq dosya.txt
+
+	•	Arka arkaya aynı olan satırları tek satıra düşürür.
+
+Sık Kullanılan Parametreler
+	•	-c : Her unique satırın kaç kez tekrar ettiğini gösterir.
+	•	-d : Sadece tekrar eden satırları gösterir.
+	•	-u : Sadece tekrar etmeyen (unique) satırları gösterir.
+
+6.2. Günlük Hayattan Örnekler (uniq)
+	1.	Bir liste içindeki kopya kayıtları temizlemek:
+
+sort isimler.txt | uniq > temiz_isimler.txt
+
+	•	Önce sort ile sıralıyoruz, böylece tekrarlar arka arkaya geliyor. Sonra uniq ile tekrarlı olanları teke düşürüyoruz.
+
+	2.	Bir log dosyasında hangi hataların kaç kez geçtiğini saymak:
+
+grep "ERROR" /var/log/app.log | sort | uniq -c
+
+	•	Önce hataları grep ile çekiyoruz, sort ile sıralıyoruz, uniq -c ile tekrar sayılarını gösteriyoruz.
+
+
+
+7. Gerçek Hayat Senaryosu: Log Analizi
+
+Diyelim ki /var/log/syslog içindeki hataları analiz edeceğiz ve tekrarlayan hataları saymak istiyoruz. Amacımız:
+	1.	ERROR geçen satırları ayıkla.
+	2.	Sadece belirli bir tarih (örneğin 2025-03-26) için ayıkla.
+	3.	En sık tekrar eden 5 hatayı bulup raporla.
+
+Yaklaşık bir örnek:
+
+# 1) ERROR geçen satırları bul
+grep "ERROR" /var/log/syslog > error_lines.txt
+
+# 2) Sadece 2025-03-26 tarihli satırları ayıkla (varsayım: tarih başta 'Mar 26' gibi yer alıyor)
+grep "Mar 26" error_lines.txt > error_2025-03-26.txt
+
+# 3) Tekrarlayan hataları say
+sort error_2025-03-26.txt | uniq -c | sort -nr > counts.txt
+
+# İlk 5 satırı alarak en sık 5 hatayı gör
+head -n 5 counts.txt
+
+Özetle:
+	•	grep ile filtreleme,
+	•	sort ile sıralama,
+	•	uniq -c ile tekrar sayıları,
+	•	head ile ilk 5 sonucu alma.
+
+Bunu bir bash script içerisinde tek satırda da birleştirebiliriz:
+
+grep "ERROR" /var/log/syslog | grep "Mar 26" | sort | uniq -c | sort -nr | head -n 5
