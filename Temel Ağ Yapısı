@@ -1,0 +1,325 @@
+1. ifconfig
+
+ifconfig, klasik (eski) Linux dağıtımlarında network arayüzlerini (interface) konfigüre etmek, IP atamak, ağ arayüzünü aktif/pasif hale getirmek gibi işler için kullanılan bir komuttur. 
+Günümüzde yerini büyük ölçüde ip komutuna bırakmış olsa da hâlâ pek çok sistemde veya alışkanlıkta yerini korur.
+
+1.1. Temel Kullanım
+
+ifconfig
+
+Bu komut, sistemdeki tüm ağ arayüzleri hakkında bilgi verir (IP adresi, netmask, broadcast, MAC adresi vb.).
+
+Parametrelerle Örnekler
+	1.	Belirli Bir Arayüzü Görüntüleme
+
+ifconfig eth0
+
+Sadece eth0 adlı arayüzün bilgilerini gösterir (güncel sistemlerde enp0s3, ens160 vb. farklı isimler olabilir).
+
+	2.	Ağ Arayüzüne IP Adresi Atama
+
+sudo ifconfig eth0 192.168.1.100 netmask 255.255.255.0
+
+Burada eth0 arayüzüne 192.168.1.100 IP adresini ve 255.255.255.0 ağ maskesini atadık.
+
+	3.	Arayüzü Etkinleştirme / Devre Dışı Bırakma
+
+# Arayüzü etkinleştirme
+sudo ifconfig eth0 up
+
+# Arayüzü devre dışı bırakma
+sudo ifconfig eth0 down
+
+Ağ arayüzü “down” olduğunda paket trafiğini durdurur.
+
+Günlük Hayattan Senaryo (ifconfig)
+	•	Test Ortamı IP Değiştirme: Özellikle sanal makine üzerinde, DHCP’den IP almadıysa veya manuel IP vermek istiyorsanız:
+
+sudo ifconfig eth0 10.0.0.50 netmask 255.255.255.0
+
+Ardından, gateway ayarı için route veya ip route kullanılabilir.
+
+Not: Modern sistemlerde ifconfig komutu net-tools paketinde bulunur; varsayılan olarak yüklü gelmeyebilir.
+
+
+
+2. ip Komutu
+
+ip komutu (iproute2 paketi), ağ konfigürasyonu için modern ve güçlü bir araçtır. ifconfig, route gibi eski araçların yaptığı pek çok işi tek bir çatı altında toparlar.
+Ayrıca VLAN, bond, tünel gibi ileri seviye ayarları da yönetebilirsiniz.
+
+2.1. Temel Kullanım
+
+ip [subcommand] [seçenekler]
+
+Örneğin, aşağıdakiler en sık kullanılan alt komutlardır:
+	•	ip addr show (ya da kısaca ip a)
+	•	ip link show
+	•	ip route show
+
+2.2. ip addr (IP Adresleri)
+	1.	Tüm Arayüzleri Görüntüleme
+
+ip addr show
+
+veya
+
+ip a
+
+Bu komut mevcut ağ arayüzlerinin IP, netmask, MAC adresi vb. bilgilerini listeler.
+
+	2.	Belirli Arayüzü Görüntüleme
+
+ip addr show dev eth0
+
+Sadece eth0 bilgilerini gösterir.
+
+	3.	Arayüze IP Eklemek
+
+sudo ip addr add 192.168.2.10/24 dev eth0
+
+CIDR notasyonu (/24) kullanarak IP atama. Bu, netmask 255.255.255.0 anlamına gelir.
+
+	4.	Arayüzü Etkinleştirme / Pasifleştirme
+
+sudo ip link set eth0 up
+sudo ip link set eth0 down
+
+
+
+2.3. ip route (Yönlendirme / Routing)
+
+ip route komutu, sistemin yönlendirme tablosunu (routing table) yönetir/görüntüler.
+	1.	Yönlendirme Tablosunu Görüntüleme
+
+ip route show
+
+Örneğin, default via 192.168.1.1 dev eth0 gibi bir satırla varsayılan ağ geçidinizi görürsünüz.
+
+	2.	Varsayılan Ağ Geçidi (Default Gateway) Ekleme
+
+sudo ip route add default via 192.168.1.1 dev eth0
+
+Artık dış ağa çıkış için 192.168.1.1 IP’sini kullanacak.
+
+	3.	Belirli Ağlara Yönlendirme Kuralı Ekleme
+
+sudo ip route add 10.10.10.0/24 via 192.168.1.254 dev eth0
+
+10.10.10.* IP blokuna gitmek için 192.168.1.254 üzerinden yönlendirme yapar.
+
+2.4. Günlük Hayattan Senaryo (ip)
+	•	Geçici IP Atama: Bir test ağına bağlandınız ve DHCP yok. ip addr add 10.0.0.2/24 dev eth0 komutuyla IP atarsınız. Test bitince ip addr del 10.0.0.2/24 dev eth0 ile silersiniz.
+	•	Ek Sanal Arayüz Oluşturma (Alias):
+
+sudo ip addr add 192.168.50.10/24 dev eth0 label eth0:1
+
+Böylece eth0 üzerinde ek bir IP çalıştırabilirsiniz.
+
+
+
+3. route
+
+route komutu, yönlendirme (routing) tablosunu görüntülemek ve düzenlemek için kullanılırdı. Artık modern sistemlerde aynı işi ip route devralmıştır. 
+Ancak kimi eski sistemlerde hâlâ kullanılmaktadır.
+
+3.1. Temel Kullanım
+
+route -n
+
+-n parametresi, isim çözümlemesi yapmadan IP’leri doğrudan göstermesini sağlar.
+
+Çıktıda genellikle şu sütunlar görürsünüz:
+	•	Destination
+	•	Gateway
+	•	Genmask (Netmask)
+	•	Flags
+	•	Iface (Hangi arayüz)
+
+Örnek çıktı:
+
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Iface
+0.0.0.0         192.168.1.1     0.0.0.0         UG    eth0
+192.168.1.0     0.0.0.0         255.255.255.0   U     eth0
+
+3.2. Yönlendirme Kuralı Ekleme / Silme
+	1.	Varsayılan Gateway Ekleme
+
+sudo route add default gw 192.168.1.1 eth0
+
+
+	2.	Belirli Bir Ağa Yönlendirme
+
+sudo route add -net 10.0.0.0 netmask 255.255.255.0 gw 192.168.1.254
+
+
+
+3.3. Günlük Hayattan Senaryo (route)
+•	İki Ağ Arasında Köprü: Sisteminizin iki ethernet kartı var ve farklı ağlara bağlı. route komutuyla belirli ağlar için hangi gateway üzerinden geçeceğinizi tanımlayabilirsiniz.
+•	Sorun Giderme: Eğer internet çıkışı yoksa route -n ile default gateway tanımlı mı kontrol edebilirsiniz.
+
+Not: Modern yaklaşımlarda ip route kullanmanız önerilir.
+
+
+
+4. netstat
+
+netstat, ağ bağlantılarını, routing tablolarını, arayüz istatistiklerini, socket (bağlantı) durumlarını görüntülemeye yarayan eski bir araçtır. 
+Yerini kısmen ss ve ip komutları almıştır. Ancak hâlâ bazı senaryolarda, özellikle eski sistemlerde kullanılmaya devam edilebilir.
+
+4.1. Temel Kullanım
+
+netstat -options
+
+4.2. Sık Kullanılan Parametreler
+	•	-t: TCP bağlantılarını gösterir.
+	•	-u: UDP bağlantılarını gösterir.
+	•	-l: Dinlemekte (listening) olan portları gösterir.
+	•	-p: Bağlantıya ait program/proses bilgisini de gösterir (root yetkisi gerekebilir).
+	•	-n: Host isimleri yerine IP gösterir (DNS çözümleme yapmaz, daha hızlı).
+
+Örnekler
+	1.	Dinlemekte Olan TCP Bağlantıları
+
+netstat -tlpn
+
+	•	-t: TCP
+	•	-l: Listening
+	•	-p: Program bilgisi
+	•	-n: Numeric (hızlı gösterim)
+Çıktıda Local Address, PID/Program name gibi sütunlar olur. Mesela:
+
+tcp   0   0 0.0.0.0:22    0.0.0.0:*    LISTEN   1234/sshd
+
+Bu, 22 numaralı portta SSH sunucusunun dinlediğini gösterir.
+
+	2.	Tüm Mevcut Bağlantıları Görüntüleme
+
+netstat -an
+
+Burada hem dinleyen hem de aktif bağlantılar listelenir.
+
+4.3. Günlük Hayattan Senaryo (netstat)
+	•	Bir port hangi proses tarafından kullanılıyor?
+
+sudo netstat -tulpn | grep 80
+
+80 numaralı portu kim dinliyor, görebilirsiniz (Apache, Nginx, vb.).
+
+
+
+5. ss (socket statistics)
+
+ss, modern Linux sistemlerinde netstat yerine önerilen araçtır. TCP, UDP ve UNIX socket bağlantılarını gösterir. 
+ss genellikle netstat’a göre daha hızlı ve daha detaylı bilgi sunar.
+
+5.1. Temel Kullanım
+
+ss [seçenekler]
+
+5.2. Sık Kullanılan Parametreler
+	•	-t : TCP bağlantıları
+	•	-u : UDP bağlantıları
+	•	-l : Dinlemekte olan soketler
+	•	-p : Proses bilgisini görüntüle
+	•	-n : IP ve portları numeric olarak göster
+	•	-r : Reverse DNS yapmak (isim çözümlemesi)
+
+Örnekler
+	1.	Dinleyen TCP Portları
+
+ss -tlpn
+
+netstat’ın -tlpn kullanımına benzer: Dinleyen TCP portları, pid/program bilgisi, numeric adres.
+
+	2.	Tüm UDP Bağlantıları
+
+ss -uap
+
+	•	-u: UDP
+	•	-a: Tüm bağlantılar (sadece dinleyenler değil)
+	•	-p: Proses bilgisi
+
+	3.	Aktif Tüm Soketler
+
+ss -an
+
+Tüm bağlantı durumlarını numeric olarak listeler.
+
+5.3. Günlük Hayattan Senaryo (ss)
+	•	Güvenlik Kontrolü: Bir sunucuda hangi portların açık olduğunu hızlıca görmek için:
+
+ss -tuln
+
+
+	•	Sorun Giderme: Yeni bir web uygulaması 8080 portundan çalışıyor ama dışarıdan erişilemiyor mu?
+
+ss -tlpn | grep 8080
+
+Bu komutla gerçekten uygulamanın 8080’i dinleyip dinlemediğini anında görebilirsiniz.
+
+
+
+6. Gerçek Hayat Senaryosu: Ağ Arızasını Giderme (Troubleshooting)
+
+Bir senaryo düşünün: A makinesinden B makinesine ping atılamıyor ve internet erişimi yok. Sırasıyla şu adımları inceleyebilirsiniz:
+	1.	Arayüz Durumu:
+
+ip link show
+
+veya
+
+ifconfig eth0
+
+Arayüz “UP” mı, yoksa “DOWN” mı? MAC adresi doğru mu?
+
+	2.	IP Adresi ve Netmask:
+
+ip addr show dev eth0
+
+IP adresi doğru bir subnet’te mi? Mesela 192.168.1.x ise netmask /24 (255.255.255.0) doğru mu?
+
+	3.	Varsayılan Gateway:
+
+ip route show
+
+default via 192.168.1.1 dev eth0 gibi bir satır görüyor musunuz? Eğer yoksa:
+
+sudo ip route add default via 192.168.1.1 dev eth0
+
+tanımlayabilirsiniz.
+
+	4.	DNS Ayarları:
+/etc/resolv.conf dosyasında DNS sunucusu ayarlı mı? Örneğin nameserver 8.8.8.8.
+	5.	Açık Portlar ve Dinleyen Servisler:
+Bağlanmak istediğiniz servis hangi portta dinliyor?
+
+ss -tlpn
+
+veya
+
+netstat -tulpn
+
+Kontrol edin.
+
+	6.	Sonuç: Yukarıdaki aşamalarda sorun bulup düzelttikten sonra tekrar test edin.
+
+
+Özet ve Öneriler
+	1.	ifconfig ve route
+	•	Eskiden çok yaygındı, hâlâ eski alışkanlıklarda kullanılır.
+	•	Modern sistemlerde “net-tools” paketi ile gelir.
+	2.	ip
+	•	Güncel araç, hem arayüz hem routing hem de ileri konfigürasyonlar için tek çatı altında.
+	•	Tavsiye edilen yöntem: ip addr, ip link, ip route.
+	3.	netstat
+	•	Eski socket görüntüleme aracı. Hâlâ bazı sistemlerde bulunabilir.
+	•	Yerine “ss” önerilmektedir.
+	4.	ss
+	•	netstat’a benzer ama daha hızlı, daha yeni. Socket, port, proses ilişkisini kolayca gösterir.
+	5.	Günlük Kullanım İpuçları
+	•	Arayüz ve IP: ip a veya ifconfig
+	•	Yönlendirme Tablosu: ip route show veya route -n
+	•	Bağlantı Durumu (Portlar, Prosesler): ss -tlpn veya netstat -tulpn
+	•	DNS Sorunları: /etc/resolv.conf kontrol edin, ayrıca ping 8.8.8.8 ve ping google.com ile DNS mi yoksa bağlantı mı sorunlu anlayın.
