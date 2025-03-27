@@ -1,0 +1,197 @@
+Giriş: Mandatory Access Control (MAC) Nedir?
+
+Mandatory Access Control (MAC), sistem yöneticisinin ve/veya güvenlik politikalarının belirlediği kesin kurallara göre erişimi yönetir. Bu, DAC (Discretionary Access Control) sisteminde olduğu gibi dosya sahibinin istediği zaman izinleri değiştirebilmesinden farklıdır. MAC’te, kullanıcı veya süreç (process) belirli dosyaya erişse bile, MAC politikası izin vermezse erişemez.
+
+Linux dünyasında en çok bilinen iki MAC sistemi:
+	1.	SELinux (Security-Enhanced Linux): Red Hat, CentOS, Fedora gibi dağıtımlarda varsayılan veya yaygın kullanılan.
+	2.	AppArmor: Ubuntu, Debian gibi dağıtımlarda ön planda.
+
+Her ikisi de aynı amaca hizmet eder: Sistemde çalışan süreçlerin, dosyaların, ağ bağlantılarının, vb. ne yapabileceğini daha sıkı ve ince kurallarla kontrol etmek.
+
+
+
+1. SELinux
+
+Security-Enhanced Linux (SELinux), Amerika Birleşik Devletleri Ulusal Güvenlik Ajansı (NSA) tarafından başlatılmış bir proje olup, Linux çekirdeğine entegre edilmiş bir güvenlik mimarisidir. 
+Red Hat tabanlı dağıtımlarda (RHEL, CentOS, Fedora vb.) sıklıkla varsayılan olarak aktif gelir.
+
+1.1. SELinux Temel Kavramlar
+	1.	Context (Bağlam):
+Her dosya, dizin, proses vb., bir SELinux bağlamına sahiptir. Bu bağlamda genelde şu format görebilirsiniz:
+
+user_u:role_r:type_t:s0
+
+	•	user_u: SELinux kullanıcı adı (Linux kullanıcı adından farklı olabilir).
+	•	role_r: Rol, sistemdeki süreçlerin hangi rolde çalıştığını belirler (ör. system_r, user_r).
+	•	type_t: Type (veya domain) en kritik bölümdür; bu, dosya veya sürecin hangi politikaya tabi olduğunu belirler (ör. httpd_sys_content_t).
+	•	s0: MCS/MLS etiketleri (Multi-Category Security/Multi-Level Security). Daha gelişmiş veya askeri seviyede sınıflandırma için kullanılır.
+
+	2.	Type Enforcement (Tür Uygulaması):
+SELinux’ta en yaygın kullanılan yaklaşım Type Enforcementtır. Her dosya ya da süreç bir “type” (ör. httpd_t, sshd_t) etiketine sahiptir. 
+Politika, hangi type’ın hangi type’a nasıl erişebileceğini tanımlar. Örneğin httpd_t (Apache) sadece httpd_sys_content_t etiketli dosyaları okuyabilsin, vb.
+	3.	Policy (Politika):
+SELinux politikaları, hangi type’ın hangi resource’a (kaynak) nasıl erişeceğini belirleyen kurallar bütünüdür. Red Hat dünyasında iki ana politika kullanılır: targeted ve mls.
+	•	targeted: Sadece belirli servislere (ör. httpd, named, vs) yönelik koruma, diğer süreçler kısıtlı koruma alır. En yaygın olanıdır.
+	•	mls: Multi-Level Security ile çok daha ayrıntılı güvenlik düzeyleri. Daha karmaşık.
+	4.	Modes (Çalışma Modları):
+	•	Enforcing: Politika tam olarak uygulanır. İhlalleri engeller.
+	•	Permissive: Politika ihlalleri sadece loglanır ama engellenmez. Genellikle ilk konfigürasyon aşamasında, servislerin nasıl davranacağını görmek için kullanılır.
+	•	Disabled: SELinux tamamen kapalı.
+	5.	Booleans:
+SELinux politikalarında, belirli davranışları açıp kapatmaya yarayan mantıksal bayraklardır. Örneğin httpd_can_network_connect boolean’ı, 
+Apache’nin dışarıya network bağlantısı yapıp yapamayacağını kontrol eder. Yani “Apache internete bağlanabilsin mi?” gibi bir özelliği true/false yapabilirsiniz.
+
+1.2. SELinux Yönetim Araçları
+	1.	getenforce / setenforce
+	•	getenforce: Sistemin şu anki SELinux modunu (Enforcing, Permissive veya Disabled) gösterir.
+	•	setenforce 0 → Permissive moda geç.
+	•	setenforce 1 → Enforcing moda geç.
+Not: Bu değişiklik kalıcı olmaz, reboot sonrası /etc/selinux/config’e bakar.
+	2.	sestatus
+SELinux durumu hakkında özet bilgi verir (hangi policy, hangi mode’da vb.).
+	3.	chcon (change context)
+Bir dosyanın SELinux bağlamını (context) anlık olarak değiştirir. Örnek:
+
+sudo chcon -t httpd_sys_content_t /var/www/html/index.html
+
+Bu komut, /var/www/html/index.html dosyasına “httpd_sys_content_t” type’ını atar (yani web sunucusu içeriği). Ancak reboot veya restorecon komutuyla orijinal duruma dönebilir.
+
+	4.	semanage fcontext
+Kalıcı bağlam atamaları yapmak için kullanılır. chcon sadece geçici bir değişikliktir. semanage fcontext ile “bu dizin altındaki dosyalar hep httpd_sys_content_t olsun” gibi kalıcı kurallar yazabilirsiniz.
+	5.	restorecon
+Dosya/dizinlerin default SELinux context’ine dönmesini sağlar. Örnek:
+
+sudo restorecon -Rv /var/www/html
+
+-R: Rekürsif, -v: Ayrıntılı çıktı. Bu komut, sistem politikalarında tanımlı varsayılan bağlama göre /var/www/html altındaki dosyaları düzeltir.
+
+	6.	getsebool / setsebool
+SELinux boolean değerlerini görüp değiştirmek içindir.
+
+getsebool -a | grep httpd
+sudo setsebool httpd_can_network_connect on
+
+on veya off şeklinde ayarlanır. -P parametresi kalıcı hale getirir.
+
+1.3. Günlük Hayattan Örnek: Apache Hatası
+	•	CentOS/Fedora’da /var/www/html dışında bir yerde web dosyası tutmaya çalıştığınızda, SELinux buna engel olabilir.
+	•	Örneğin /home/ali/website dizinine index.html koyup Apache’ye bu dizini DocumentRoot yaptınız, ama siteye erişemiyorsunuz. Log’ta SELinux ihlali görebilirsiniz.
+	•	Çözüm: Dosyaların type’ını httpd_sys_content_t yapmak veya kalıcı olarak bu konumun web içeriği için kullanılacağını bildirmek:
+
+sudo chcon -R -t httpd_sys_content_t /home/ali/website
+
+ya da
+
+semanage fcontext -a -t httpd_sys_content_t "/home/ali/website(/.*)?"
+restorecon -Rv /home/ali/website
+
+
+
+1.4. SELinux’in Avantajları ve Zorlukları
+	•	Avantaj: Saldırgan bir servisten sistemi ele geçirse dahi, SELinux kuralları süreçlerin hangi dosyalara erişebileceğini sınırladığı için hasar sınırlanır.
+	•	Zorluk: Yanlış konfigürasyon, servislerin çalışmamasına veya dosyalara erişememesine neden olabilir. İlk etapta “hata nerede?” sorusunu sormak gerekir. 
+Log’ları (örn. /var/log/audit/audit.log) analiz etmek önemlidir.
+
+
+
+2. AppArmor
+
+AppArmor, Ubuntu, Debian ve SUSE/OpenSUSE gibi dağıtımlarda yaygın olan bir MAC çözümüdür. SELinux benzeri korumalar sağlar ama yapı ve kavramlar biraz farklıdır.
+
+2.1. Profil (Profile) Kavramı
+
+AppArmor, her bir uygulama veya daemon için bir “profil” tanımlar. Bu profil, uygulamanın hangi dosyalara hangi izinlerle erişebileceğini belirler. 
+Örneğin /usr/sbin/nginx için bir profil yazıp “şu dizinleri sadece okuma izniyle açabilir, şu dizinleri değiştirebilir, bu soketlere bağlanabilir” gibi kurallar koyabilirsiniz.
+
+Bir AppArmor profili tipik olarak /etc/apparmor.d/ dizini altında bulunur ve dosya bazında kuralları belirtir. Örnek bir profil satırı:
+
+/var/www/html/ r,
+
+Bu satır, ilgili uygulamanın /var/www/html/ dizinini “read (okuma)” modunda açabildiğini belirtir.
+
+/var/www/html/** rw,
+
+Bu ise altındaki dosyalara okuma-yazma izni verildiğini ifade eder.
+
+2.2. AppArmor Modları
+	•	enforce (uygulama): Profilin kuralları tam olarak uygulanır, ihlaller engellenir.
+	•	complain (şikayet): İhlaller loglanır ama engellenmez. Bu mod, profil geliştirme/test aşamasında yararlıdır.
+
+2.3. AppArmor Yönetim Araçları
+	1.	aa-status
+Sistemdeki AppArmor durumunu, çalışan profilleri, enforce/complain modundaki profilleri listeler.
+	2.	aa-enforce / aa-complain
+Bir profilin modunu değiştirir. Örneğin:
+
+sudo aa-complain /etc/apparmor.d/usr.sbin.nginx
+
+Bu, nginx profilini complain moduna geçirir.
+
+	3.	aa-disable / aa-enable
+Belirli bir profili devre dışı bırakır veya etkinleştirir.
+	4.	aa-genprof / aa-logprof
+	•	aa-genprof: Yeni bir profil oluşturmanıza yardımcı olur. Uygulama çalışırken AppArmor loglarını izler ve sizden onay ister (“Bu dosyaya erişmesine izin verilsin mi?” gibi).
+	•	aa-logprof: Mevcut logları okuyarak profili güncellemeye yardımcı olur.
+
+2.4. Örnek: Nginx’i AppArmor ile Kısıtlamak
+	•	Diyelim ki /etc/apparmor.d/usr.sbin.nginx adlı bir profil var. Bu profilde nginx’in hangi dizinlere erişebileceği yazıyor. 
+Nginx yeni bir dizine (ör. /data/web) ihtiyaç duyduğunda AppArmor hatası (permission denied) alabilirsiniz.
+	•	Güncellemek için sudo aa-logprof komutuyla log’ları inceleyip yeni izinleri ekleyebilirsiniz. 
+Ya da manuel olarak /etc/apparmor.d/usr.sbin.nginx dosyasına kural ekleyip “rw” izni vermeniz gerekir:
+
+/data/web/ r,
+/data/web/** rw,
+
+Sonrasında sudo service apparmor reload veya benzeri bir şekilde AppArmor’u yeniden yükleyerek yeni kuralları uygularsınız.
+
+2.5. Avantajlar ve Zorluklar
+	•	Avantaj: Profil bazlı basit yapı, her uygulamaya özel ince ayar mümkün. Ubuntu/Debian üzerinde standart geliyor, SELinux’e kıyasla öğrenmesi bazen daha kolay bulunuyor.
+	•	Zorluk: Büyük veya karmaşık uygulamalarda profil hazırlamak zahmetli olabilir. Yeni dosya konumları eklediğinizde profilin güncellenmesi gerekir.
+
+
+
+3. SELinux vs AppArmor
+
+Her ikisi de benzer amaçlı araçlar olsa da farklı yaklaşım ve terminolojiye sahiptirler:
+	•	SELinux:
+	•	“type enforcement” odağı, “context” kavramı (dosya, süreç, vs.).
+	•	Red Hat/CentOS/Fedora’da varsayılan.
+	•	Daha ince ayarlar, askeri seviyede MLS gibi opsiyonlar.
+	•	Konfigürasyonu güçlü, ama ilk öğrenmesi bazen zor.
+	•	AppArmor:
+	•	Profil tabanlı, her uygulama için bir profil yazar.
+	•	Ubuntu/Debian/SUSE gibi dağıtımlarda varsayılan veya kolay kurulur.
+	•	SELinux’e kıyasla profillerle çalışmak bazı kullanıcılar için daha sezgisel.
+	•	Dosya/belge tabanlı kurallar, yeni dizinler ekledikçe profil güncelleme gerektirir.
+
+Güvenlik açısından ikisi de çok güçlüdür. Hangisini kullanacağınız çoğu zaman dağıtım tercihine ve kurulu ekosisteme bağlıdır.
+
+
+
+4. Neden MAC Katmanı Önemli?
+
+Geleneksel (DAC) dosya izinleri bazen yetersiz kalabilir. Örneğin, bir servis çalıştıran kullanıcı (ör. apache kullanıcısı)
+kendi ev dizinine, /tmp’ye yazabiliyorsa veya beklenmeyen dosyalara erişebiliyorsa, bir saldırgan bu servisi ele geçirdiğinde daha fazla alanı kullanabilir. 
+MAC sistemi devreye girdiğinde, “bu servis sadece /var/www/html içindeki belirli type’daki dosyaları okuyabilir” gibi kurallar konur. 
+Sunucuya sızan bir saldırgan, DAC izinleri uysa dahi MAC politikasına takılıp daha fazla zarar veremeyebilir.
+
+
+
+5. Yönetim ve Sorun Giderme İpuçları
+	1.	Loglar:
+	•	SELinux’ta auditd servisi açıksa, /var/log/audit/audit.log dosyasında detaylı ihlal mesajları olur.
+	•	AppArmor, çoğunlukla /var/log/kern.log, /var/log/syslog veya /var/log/audit.log gibi dosyalara log yazar. dmesg çıktısında da AppArmor mesajları görebilirsiniz.
+	•	Bir hata ile karşılaştığınızda logları incelemek, hangi dosya/type/profil engellendiğini görmek için kritiktir.
+	2.	Geçici Olarak Devre Dışı Bırakmak:
+	•	SELinux için setenforce 0 (Permissive moda geçer).
+	•	AppArmor için aa-complain veya profil disable edilebilir.
+	•	Üretim ortamında tamamen kapatmak yerine “complain/permissive” modunda neden engellendiğini keşfetmek daha mantıklı olur.
+	3.	Politika/Profil Güncellemeleri:
+	•	Yeni bir dizin, yeni bir konfigürasyon… SELinux’ta “dosyanın context’i doğru mu?” diye kontrol edin.
+	•	AppArmor’da “profilde bu yolu tanımladık mı?” diye bakın.
+	4.	Kompleks Senaryolar:
+	•	Veritabanı, web server, dosya paylaşımı gibi karmaşık yapılarda, SELinux booleans veya AppArmor profilleri üzerinde ek ayarlar gerekebilir (örn. httpd_can_network_connect_db on).
+	•	Yanlış konfigürasyon servisleri bozabilir, bu nedenle önce test ortamlarda denemek önerilir.
+	5.	Kapsamlı Güvenlik:
+	•	SELinux/AppArmor tek başına tam güvenlik sağlamaz; yine de uygulama güncellemeleri, ağ güvenliği, firewall yönetimi gibi diğer katmanlar da gerek.
+	•	MAC sistemleri, saldırganın bir servisten tüm sistemi ele geçirme riskini azaltır.
