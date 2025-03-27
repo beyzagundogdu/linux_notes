@@ -1,0 +1,215 @@
+1. SSH (Secure Shell)
+
+SSH, uzaktaki bir sunucuya (genellikle Linux/Unix benzeri sistemlerde) güvenli bir şekilde bağlanmak için kullanılır. SSH protokolü şifreli bir bağlantı kurarak, veri güvenliğini sağlar.
+
+1.1. Temel SSH Kullanımı
+
+ssh kullanıcı_adı@sunucu_adresi
+
+	•	kullanıcı_adı: Hedef sunucudaki geçerli bir kullanıcı hesabı.
+	•	sunucu_adresi: IP adresi veya alan adı (ör. 192.168.1.10 veya sunucu.ornek.com).
+
+Bağlantı kurulurken ilk kez bağlanıyorsanız sistem size RSA parmak izi (fingerprint) bilgilerini sorar ve yes derseniz ~/.ssh/known_hosts dosyasına ekler.
+
+Örnek:
+
+ssh ali@192.168.1.10
+
+Bu komut, ali kullanıcısı ile 192.168.1.10 IP adresine SSH üzerinden bağlanır.
+
+Parola ile Bağlantı
+
+Varsayılan olarak SSH bir parola ister. Uygulamada, parolayı yazınca terminalde görünmeyecektir (gizli şekilde girersiniz).
+
+1.2. SSH Anahtar Tabanlı (Key-based) Kimlik Doğrulama
+
+Her seferinde parola girmek yerine SSH anahtar çifti (kamu (public) ve özel (private) anahtarlar) oluşturarak parola girmeden güvenli bağlantı kurabilirsiniz. 
+Böylece sistem otomatik olarak özel anahtarınızı kullanarak oturum açar.
+
+Anahtar Oluşturma
+
+ssh-keygen -t rsa -b 4096
+
+	•	-t rsa: RSA tipinde anahtar üretir.
+	•	-b 4096: 4096 bitlik uzun bir anahtar. Güvenlik için önerilir.
+	•	Komut, genelde ~/.ssh/id_rsa (private key) ve ~/.ssh/id_rsa.pub (public key) dosyalarını oluşturur.
+
+Anahtarın Sunucuya Kopyalanması
+
+ssh-copy-id -i ~/.ssh/id_rsa.pub ali@192.168.1.10
+
+Bu komut, id_rsa.pub kamu anahtarını uzak sunucudaki ~/.ssh/authorized_keys içine ekler. Artık aşağıdaki gibi bağlanabilirsiniz:
+
+ssh ali@192.168.1.10
+
+Parola sormadan (veya özel anahtarınızda bir “passphrase” belirlediyseniz sadece o passphrase’i sorarak) oturum açılır.
+
+1.3. SSH Konfigürasyonu
+
+Kişisel bilgisayarınızda ~/.ssh/config dosyası oluşturarak veya düzenleyerek sık kullanılan sunucular için takma adlar (alias) tanımlayabilirsiniz:
+
+Host sunucu1
+    HostName 192.168.1.10
+    User ali
+    Port 22
+
+Host websunucum
+    HostName sunucu.ornek.com
+    User ali
+    IdentityFile ~/.ssh/id_rsa
+
+Bu sayede:
+
+ssh sunucu1
+
+komutu otomatik olarak ssh ali@192.168.1.10 -p 22 anlamına gelir.
+
+1.4. SSH Tünelleme (Port Yönlendirme)
+
+SSH, sadece uzaktan terminal erişimi için değil, aynı zamanda “port forwarding” işlemleri için de kullanılır. 
+Örneğin, uzak makinedeki bir veritabanına yerelden bağlanmak istediğinizde tünel açabilirsiniz.
+
+Örnek: Yerelde 5433 portu üzerinden uzaktaki 5432 portuna bağlanmak (PostgreSQL)
+
+ssh -L 5433:localhost:5432 ali@sunucu.ornek.com
+
+	•	-L <yerel_port>:<uzaktaki_adres>:<uzak_port>
+	•	Bu örnekte yerelde 5433’e gelen istekler, sunucu.ornek.com’daki localhost:5432’ye (PostgreSQL’in portu) yönlendirilir.
+
+Böylece kendi makinenizde psql -h 127.0.0.1 -p 5433 ile sanki uzaktaki veritabanına bağlanıyormuşsunuz gibi çalışabilirsiniz.
+
+
+
+2. SCP (Secure Copy)
+
+SCP, SSH protokolü üzerinden dosya kopyalamak için kullanılan bir araçtır. Adı “secure copy”’den gelir.
+
+2.1. Temel Kullanım
+
+scp kaynak hedef
+
+Burada hem kaynak hem de hedef, yerel veya uzak adresler şeklinde belirtilebilir.
+
+Yerelden Uzağa Dosya Kopyalama
+
+scp /home/ali/dosya.txt ali@192.168.1.10:/home/ali/
+
+	•	dosya.txt yerel makinedeki dosya,
+	•	ali@192.168.1.10:/home/ali/ → uzak makinedeki hedef dizin.
+
+Uzaktan Yerele Dosya Kopyalama
+
+scp ali@192.168.1.10:/home/ali/dosya.txt /home/ali/
+
+	•	Bu komut, uzak makinedeki /home/ali/dosya.txt dosyasını, yerel makinedeki /home/ali/ dizinine indirir.
+
+Dizin Kopyalama
+
+SCP ile dizinleri kopyalamak için -r (recursive) parametresini kullanırız:
+
+scp -r /home/ali/proje ali@192.168.1.10:/home/ali/
+
+Bu, proje adlı klasörü altındakilerle birlikte komple kopyalar.
+
+2.2. Örnek Günlük Senaryo (scp)
+	•	Tek dosya yüklemek: Log dosyanızı hızlıca kontrol etmek için uzak makineye atmak:
+
+scp ~/logs/system.log ali@sunucu.ornek.com:/tmp/
+
+
+	•	Uzak yedek almak: Önemli bir konfigürasyon dosyasını yerelde saklamak için:
+
+scp root@192.168.1.20:/etc/nginx/nginx.conf ~/yedekler/
+
+
+
+
+3. rsync
+
+rsync, dosya ve dizinleri senkronize etmek için kullanılan çok güçlü ve esnek bir araçtır. 
+Büyük verisetlerini kopyalarken sadece değişen kısımları aktararak bant genişliğinden tasarruf sağlar. Aynı zamanda yerel veya uzak sistemler arasında çalışabilir.
+
+3.1. Temel Kullanım
+
+rsync [opsiyonlar] kaynak hedef
+
+	•	kaynak ve hedef olarak yerel yol veya kullanıcı@sunucu:/yol formatında uzak yol verilebilir.
+	•	rsync varsayılan olarak SSH üzerinden çalışır (eğer kullanıcı@sunucu şeklinde belirtirseniz).
+
+Basit Örnek
+
+rsync -av /home/ali/proje/ ali@192.168.1.10:/home/ali/proje_yedek/
+
+	•	-a : (archive) mod, dizin içeriğini alttaki tüm dosya ve klasörleriyle birlikte hakları, sahiplikleri koruyarak kopyalar.
+	•	-v : (verbose) ayrıntılı çıktı verir.
+
+Bu komut, yereldeki /home/ali/proje/ dizinini, uzak makinedeki /home/ali/proje_yedek/ dizinine senkronize eder.
+
+Önemli Opsiyonlar
+	•	-z : Veri sıkıştırması. Özellikle büyük dosyalarda ve yavaş bağlantılarda hız kazandırır.
+	•	--delete : Hedefte artık kaynakta olmayan dosyaları siler (tam senkron için kullanılır).
+	•	--progress : Aktarım sırasında ilerlemeyi (progress) gösterir.
+	•	-P : --partial + --progress parametrelerini birlikte kullanır. Devam edebilir aktarım ve ilerleme çubuğu sağlar.
+
+3.2. Günlük Hayattan Örnekler (rsync)
+	1.	Web Sitesi Güncelleme (Deployment)
+Geliştiriciniz olarak yerelde hazırladığınız site dosyalarını hızlıca sunucuya yüklemek:
+
+rsync -avzP ./website/ ali@sunucu.ornek.com:/var/www/website/
+
+	•	-a (tüm dosya/dizinleri haklarıyla beraber),
+	•	-v (ayrıntılı çıktı),
+	•	-z (sıkıştırma),
+	•	-P (progress + kaldığı yerden devam)
+Parametrelerini birlikte kullanırsınız.
+
+	2.	Yedek Alma
+Yerel makinede /backup klasörünü uzak makinedeki /home/backup ile senkron tutmak:
+
+rsync -av --delete /backup/ ali@192.168.1.10:/home/backup/
+
+Bu komut her çalıştığında farklılıkları yükler, kaynakta silinen dosyaları da uzaktan siler (--delete sayesinde).
+Gerçek bir yedekleme senaryosunda bu parametereler çok önemlidir.
+
+	3.	Sadece Değişiklikleri Aktarmak
+Büyük veritabanı dump dosyalarınız (ör. 2GB) var. Her günün sonunda sadece farklılaşan kısımlar uzaktan senkronize edilsin ki bant genişliği tasarrufu olsun:
+
+rsync -avz db_dump.sql ali@sunucu.ornek.com:/mnt/backups/
+
+rsync, önceki aktarım kayıtlarını kullanarak değişen blokları gönderir, bu da SCP’ye göre çok daha hızlı güncellemeler sağlar.
+
+
+
+4. Hangisini Ne Zaman Kullanmalı?
+	1.	SSH:
+	•	Uzak sisteme kabuk (shell) erişimi için.
+	•	Komut çalıştırma, yönetim, sunucu yapılandırma.
+	•	Bağlantıyı tünellemek için (port forwarding).
+	2.	SCP:
+	•	Tek seferlik veya basit dosya/dizin kopyalamada hızlı bir çözüm.
+	•	Karmaşık senkronizasyon ihtiyacı yoksa kolay yoldan dosyaları taşımak için.
+	3.	rsync:
+	•	Dosya senkronizasyonu.
+	•	Yedekleme, replikasyon veya büyük/veri ağır projelerde sadece değişen kısımları aktarmak.
+	•	Düzenli yedekleme senaryolarında bant genişliği tasarrufu.
+
+⸻
+
+5. Öneriler ve İpuçları
+	1.	SSH Anahtarınızı Koruyun:
+	•	Özel anahtar dosyanız (id_rsa gibi) başkalarının eline geçmemeli.
+	•	Gerekirse bir “passphrase” belirleyin.
+	•	Dosya izinlerini 600 olarak ayarlayın: chmod 600 ~/.ssh/id_rsa.
+	2.	SSH Config Dosyası:
+	•	Sık bağlandığınız sunucular için takma ad kullanın, hayatınızı kolaylaştırır.
+	3.	SCP vs rsync:
+	•	Çok büyük dosyalar veya tekrarlı yükleme/yedeklemeler için her zaman rsync daha verimlidir.
+	•	Basit ve tek seferlik işler için scp pratik bir seçimdir.
+	4.	Tünelleme ile Güvenli Erişim:
+	•	Uzak sunucu üzerinde açık port sayısını azaltmak için SSH tünelinden yararlanabilirsiniz.
+	•	Örneğin veritabanı portunu dışarı açmak yerine sadece SSH üzerinden port yönlendirmesi yaparsanız güvenlik katmanınız artar.
+	5.	rsync ile Sıkıştırma:
+	•	-z parametresi yavaş bağlantılarda aktarımı ciddi hızlandırır.
+	•	Ancak zaten sıkıştırılmış (ZIP, tar.gz, mp4 vb.) dosyalar için ekstra yarar sağlamayabilir.
+	6.	Senkronizasyon Log’u Tutma:
+	•	Özellikle otomatik yedekleme script’lerinde rsync veya scp çıktısını log dosyalarına yönlendirerek kayıt altına almak faydalı olur.
