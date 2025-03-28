@@ -1,0 +1,89 @@
+SSL/TLS Nedir?
+	•	SSL (Secure Sockets Layer) ve TLS (Transport Layer Security), internet üzerinden veri iletişimini şifreleyerek güvenli hale getiren protokollerdir.
+	•	“HTTPS” gibi şifreli bağlantılar kurarak gizlilik (confidentiality) ve bütünlük (integrity) sağlar.
+	•	“SSL sertifikası” tabiri alışılmış olsa da günümüzde TLS en güncel ve güvenli sürümdür.
+
+Temel Kavramlar
+	•	Private Key (Özel Anahtar) ve Public Key (Genel Anahtar): Şifrelemenin temelini oluşturan kriptografik anahtar çifti.
+	•	CSR (Certificate Signing Request): Sertifika otoritesine (CA) başvuru için hazırlanan dosya.
+	•	CA (Certificate Authority): Sertifikayı imzalayan, alan adının gerçek sahibini onaylayan kuruluş (ör. Let’s Encrypt, DigiCert).
+	•	Self-Signed Certificate: Sertifikayı kendiniz imzaladığınızda ortaya çıkar, tarayıcılar güvensiz uyarısı verir (dahili/test ortamlarında kullanılır).
+	•	SAN (Subject Alternative Name): Tek sertifikada birden çok domain veya alt alan adı barındırmak için.
+
+
+
+OpenSSL ile Sertifika Oluşturma Süreci
+	1.	Özel Anahtar Oluşturma
+
+openssl genrsa -out myserver.key 2048
+
+	•	2048 bit RSA anahtar üretir (veya ecparam ile ECDSA seçilebilir).
+
+	2.	CSR (Certificate Signing Request) Oluşturma
+
+openssl req -new -key myserver.key -out myserver.csr
+
+	•	Kullanıcıdan (ülke, şehir, domain adı vs.) bilgiler ister.
+	•	Modern tarayıcılarda SAN (subjectAltName) alanı kullanmak gerekir (konfigürasyon dosyasıyla veya parametrelerle eklenir).
+
+	3.	Sertifikayı İmzalama
+	•	Self-Signed (Kendi Kendine İmzalı)
+
+openssl x509 -req -in myserver.csr -signkey myserver.key -out myserver.crt -days 365
+
+	•	1 yıllık geçerli, test/dahili kullanım için.
+
+	•	CA’dan İmzalı
+	•	CSR’yi CA’ya gönderirsiniz. CA onaylayıp .crt veya .pem döndürür.
+	•	Bu sertifika, tarayıcılarda güven uyarısı vermeden çalışır.
+
+	4.	Sertifikayı Web Sunucusuna Tanımlama
+	•	Apache (ör. ssl.conf):
+
+SSLCertificateFile /etc/ssl/certs/myserver.crt
+SSLCertificateKeyFile /etc/ssl/private/myserver.key
+
+
+	•	Nginx (ör. server blok):
+
+ssl_certificate     /etc/ssl/certs/myserver.crt;
+ssl_certificate_key /etc/ssl/private/myserver.key;
+
+
+	•	Sunucuyu yeniden başlatın veya konfigürasyonu yenileyin.
+
+
+
+Kendi CA’nızı Oluşturmak (İsteğe Bağlı)
+	•	Bir “root CA” anahtarı ve sertifikası oluşturarak (self-signed), sonra kendi iç ağınızda sertifikaları bu CA ile imzalayabilirsiniz.
+	•	İstemci makinelerde bu CA’yı “güvenilir” olarak eklemek gerekir. Aksi halde tarayıcı uyarı verir.
+
+Örnek adımlar:
+	1.	Root CA Anahtarı: openssl genrsa -out myRootCA.key 4096
+	2.	Root CA Sertifikası: openssl req -x509 -new -key myRootCA.key -out myRootCA.crt -days 3650
+	3.	Sunucu Sertifikası İmzalama:
+
+openssl x509 -req -in myserver.csr -CA myRootCA.crt -CAkey myRootCA.key \
+    -CAcreateserial -out myserver.crt -days 365
+
+
+
+
+Önemli İpuçları
+	1.	Güvenlik ve İzinler
+	•	Özel anahtar (.key) dosyasının izinlerini sınırlı tutun (örn. chmod 600).
+	•	Parolasız anahtar kullanmak pratik ama güvenlik riski oluşturabilir.
+	2.	SAN Alanı
+	•	Sertifikanızda subjectAltName boşsa tarayıcılar uyarı verir.
+	•	Aynı sertifikada birden çok alan adı/alt alan adı (örn. www.example.com, api.example.com) için SAN girişi kullanılabilir.
+	3.	Self-Signed vs. CA Sertifikaları
+	•	Self-signed, tarayıcılarda “güvensiz” uyarısı çıkarır. Test, dahili ağ veya geçici projelerde tercih edilir.
+	•	Üretim ortamında CA imzalı sertifika (Let’s Encrypt, DigiCert vb.) önerilir.
+	4.	Protokoller ve Şifre Kümeleri
+	•	SSLv2/SSLv3 artık güvensizdir, modern TLS (1.2, 1.3) sürümleri kullanılır.
+	•	Kripto algoritmalar (RSA 2048+, ECDSA, SHA-256 vb.) güncel olmalı.
+	5.	Sertifikaları Doğrulama
+	•	openssl x509 -in myserver.crt -text -noout ile ayrıntılara bakabilirsiniz.
+	•	openssl s_client -connect myserver.example.com:443 ile uzaktan test edebilirsiniz.
+	•	Anahtar-Sertifika eşleşmesi: -modulus | openssl md5 yöntemini kullanarak hash kontrolleri yapılabilir.
+
