@@ -1,0 +1,62 @@
+1. SSH Brute-Force Saldırıları Nedir?
+	•	Saldırganlar, SSH’de bir kullanıcı hesabının (genellikle root) parolasını sürekli deneyerek kırmaya çalışırlar.
+	•	/var/log/auth.log veya /var/log/secure dosyasında çok sayıda “Failed password” mesajı görüyorsanız saldırı altındasınızdır.
+
+
+
+2. Fail2Ban Nedir ve Nasıl Çalışır?
+	•	Fail2Ban, log dosyalarını izleyip belli bir süre içinde belli sayıda başarısız giriş denemesi gören IP’leri otomatik banlayan bir araçtır.
+	•	Genelde ban, iptables (ya da benzeri bir firewall) kuralı ekleyerek yapılır.
+	•	“Jail” adı verilen yapılandırmalarla (ör. [sshd]) istediğiniz servis(ler) için koruma aktif hale getirilir.
+
+Kurulum (örnek Ubuntu/Debian):
+
+sudo apt-get update
+sudo apt-get install fail2ban
+sudo systemctl enable fail2ban
+sudo systemctl start fail2ban
+
+
+
+
+3. Temel Yapılandırma
+	•	Konfigürasyon dosyası: /etc/fail2ban/jail.conf ve kopyası jail.local.
+	•	jail.local içindeki [DEFAULT] kısmı genel ayarları içerir (bantime, findtime, maxretry).
+
+[DEFAULT]
+bantime  = 600
+findtime = 600
+maxretry = 5
+ignoreip = 127.0.0.1/8
+
+
+	•	[sshd] kısmını aktif ederek SSH brute-force’u engelleyebilirsiniz:
+
+[sshd]
+enabled  = true
+port     = 22
+logpath  = /var/log/auth.log   # veya /var/log/secure
+maxretry = 3
+
+
+
+Açıklamalar:
+	•	bantime: IP’nin ne kadar süre (saniye) engelleneceği.
+	•	findtime: Bu süre içinde maxretry kadar başarısız deneme olursa ban uygular.
+	•	ignoreip: Asla engellenmemesi gereken IP’ler (ofis ağınız vb.).
+
+Uygulama:
+
+sudo systemctl restart fail2ban
+sudo fail2ban-client status        # Genel durum
+sudo fail2ban-client status sshd   # sshd jail için ayrıntılar
+
+
+
+
+4. SSH Güvenlik Sertleştirme İpuçları
+	1.	SSH Anahtar Kullanımı: Parola yerine public/private key ile kimlik doğrulama yapın. Mümkünse PasswordAuthentication no ayarıyla parola girişini kapatın.
+	2.	Root Login Kapatma: PermitRootLogin no yaparak saldırganların doğrudan root’a saldırmasını engelleyin.
+	3.	SSH Portunu Değiştirme: 22 yerine ör. 2222 kullanmak brute-force botlarını azaltabilir (ama kesin çözüm değildir).
+	4.	Düzenli Güncellemeler: Sistemi ve SSH’yi güncel tutun. Eski sürümler güvenlik açığı bulundurabilir.
+	5.	Ek Araçlar: 2FA (iki faktörlü kimlik doğrulama), firewall (ufw, iptables, firewalld), log izleme.
